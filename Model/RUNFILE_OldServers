@@ -1,0 +1,29 @@
+#!/bin/bash
+
+export MP_SHARED_MEMORY=yes
+export OMP_NUM_THREADS=4
+# need to set numthreads in .f90 as well
+ulimit -s unlimited
+export FC='ifort'
+export NETCDF='/share/apps/netcdf/intel/4.2.1'
+export NETCDFLIBDIR=$NETCDF/lib
+export NETCDFINCDIR=$NETCDF/include
+export HDF5='/share/apps/hdf5/intel/1.8.11'    #'/share/apps/hdf5/intel/1.8.15'  
+export HDF5LIBDIR=$HDF5/lib
+export SZIP='/share/apps/szip/2.1'
+export SZIPLIBDIR=$SZIP/lib
+
+ifort -I$NETCDFINCDIR -c -fast -free QIBT_exp01.f90 -qopenmp -check bounds -g
+ifort -o QIBT_exp01_squall QIBT_exp01.o -qopenmp -L$NETCDFLIBDIR -lnetcdf -lnetcdff -shared-intel -L$HDF5LIBDIR -lhdf5_hl -lhdf5
+./QIBT_exp01_squall > shell_output_1994-1998.txt # squall
+#shell_output_1989-1993.txt # monsoon
+#shell_output_1979-1983.txt # blizzard 
+#shell_output_1984-1988.txt # maelstrom
+
+
+
+
+
+
+
+
