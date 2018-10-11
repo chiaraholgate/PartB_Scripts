@@ -31,39 +31,25 @@ region = 'Australia'
 #==============================================================================
 # Create a date list   
 #==============================================================================
-Start_date = '19800101' ; Start_year = Start_date[0:4] ; Start_month = Start_date[4:6]; Start_day = Start_date[6:8]
-End_date = '19810105' ; End_year = End_date[0:4] ; End_month = End_date[4:6]; End_day = End_date[6:8]
+Start_date = '19790101' ; Start_year = Start_date[0:4] ; Start_month = Start_date[4:6]; Start_day = Start_date[6:8]
+End_date = '20131231' ; End_year = End_date[0:4] ; End_month = End_date[4:6]; End_day = End_date[6:8]
 Yearlist = pandas.date_range(Start_year,End_year,freq='AS').year # Note: 'A' gives end of year, 'AS' start of year. Must use full years in this script.
-Daylist = pandas.date_range(Start_date,End_date,freq='d')
-dateidx = range(len(Daylist))
-
-date_list=np.zeros([len(Daylist),7])*np.nan
-
-for j in range(len(Daylist)):  
-    yyyy = '%04u' % Daylist[j].year
-    mm = '%02u' % Daylist[j].month
-    dd = '%02u' % Daylist[j].day
-    date_list[j,0] = yyyy+mm+dd
-    date_list[j,1] = dateidx[j]         
-    date_list[j,2] =yyyy
-    date_list[j,3] = yyyy+mm
-    date_list[j,4] = mm+dd
-    date_list[j,5] = mm
-    date_list[j,6] = dd
 
 n_i,n_j = 134,205 # QIBT model dimensions
 for year in Yearlist:
-    indices = np.where(date_list[:,2]==year)[0]
-    wv_cont_sum_daily_mm = np.zeros([len(indices),n_i,n_j])*np.nan
-    wv_cont_apbl_sum_daily_mm = np.zeros([len(indices),n_i,n_j])*np.nan
-    pre_grid_daily = np.zeros([len(indices),n_i,n_j])*np.nan
-    pre_total_daily = np.zeros([len(indices)])
-    wv_cont_sum_daily_pct = np.zeros([len(indices),n_i,n_j])*np.nan
-    wv_cont_apbl_sum_daily_pct = np.zeros([len(indices),n_i,n_j])*np.nan
-    for idx in indices:
-        month = '%02u' % Daylist[idx].month
-        day = Daylist[idx].day
-        fname = 'bt.'+str(year)+month+'_'+str(day)+'.nc'
+    start_day = str(year)+'0101' ; end_day = str(year)+'1231'
+    daylist = pandas.date_range(start_day,end_day,freq='d') 
+    wv_cont_sum_daily_mm = np.zeros([len(daylist),n_i,n_j])*np.nan
+    wv_cont_apbl_sum_daily_mm = np.zeros([len(daylist),n_i,n_j])*np.nan
+    pre_grid_daily = np.zeros([len(daylist),n_i,n_j])*np.nan
+    pre_total_daily = np.zeros([len(daylist)])
+    wv_cont_sum_daily_pct = np.zeros([len(daylist),n_i,n_j])*np.nan
+    wv_cont_apbl_sum_daily_pct = np.zeros([len(daylist),n_i,n_j])*np.nan
+    for d in daylist:
+        idx = np.where(daylist==d)[0][0]
+        mm = '%02u' % d.month
+        dd = d.day
+        fname = 'bt.'+str(year)+mm+'_'+str(dd)+'.nc'
         file = dir_out+region+'/100parcels/TS10min/'+fname
         if os.path.isfile(file) == True:
             print fname
@@ -112,52 +98,52 @@ for year in Yearlist:
     
                     
     # Save to netcdf (save in same NETCDF3 as model output??)
-#    ofile = dir_out+region+'/100parcels/TS10min/Processed/Yearly/'+region+'_'+str(year)+'_wvcont.nc'    
-#    with Dataset(ofile, 'w', format='NETCDF4_CLASSIC') as of: 
-#        of.createDimension('i_cross', n_i)
-#        of.createDimension('j_cross', n_j)    
-#        of.createDimension('time', len(indices))
-#        
-#        of.createVariable('day', 'f4', ('time'))
-#        of['day'].long_name = 'days since '
-#        of['day'].units = 'days'
-#        of['day'][:] = idx
-#
-#        of.createVariable('latitcrs', 'f4', ('i_cross', 'j_cross'))
-#        of['latitcrs'].long_name = 'LATITUDE (SOUTH NEGATIVE)'
-#        of['latitcrs'].units = 'degrees'
-#        of['latitcrs'][:] = latitcrs
-#        
-#        of.createVariable('longicrs', 'f4', ('i_cross', 'j_cross'))
-#        of['longicrs'].long_name = 'LONGITUDE (WEST NEGATIVE)'
-#        of['longicrs'].units = 'degrees'
-#        of['longicrs'][:] = longicrs
-#        
-#        of.createVariable('pre', 'f4', ('time','i_cross', 'j_cross'))
-#        of['pre'].long_name = 'precipitation'
-#        of['pre'].units = 'mm'
-#        of['pre'][:] = pre_grid_daily
-#        
-#        of.createVariable('wv_cont_sum_yearly_mm', 'f4', ('i_cross', 'j_cross'))
-#        of['wv_cont_sum_yearly_mm'].long_name = 'mm contribution of each cell to all rain in the domain'
-#        of['wv_cont_sum_yearly_mm'].units = 'mm'
-#        of['wv_cont_sum_yearly_mm'][:] = wv_cont_sum_yearly_mm
-#        of['wv_cont_sum_yearly_mm'].fill_value = -9999.0
-#        
-#        of.createVariable('wv_cont_sum_yearly_pct', 'f4', ('i_cross', 'j_cross'))
-#        of['wv_cont_sum_yearly_pct'].long_name = '% contribution of each cell to all rain in the domain'
-#        of['wv_cont_sum_yearly_pct'].units = '%'
-#        of['wv_cont_sum_yearly_pct'][:] = wv_cont_sum_yearly_pct
-#        of['wv_cont_sum_yearly_pct'].fill_value = -9999.0
-#        
-#        of.createVariable('wv_cont_apbl_sum_yearly_mm', 'f4', ('i_cross', 'j_cross'))
-#        of['wv_cont_apbl_sum_yearly_mm'].long_name = 'mm contribution above PBL of each cell to all rain in the domain'
-#        of['wv_cont_apbl_sum_yearly_mm'].units = 'mm'
-#        of['wv_cont_apbl_sum_yearly_mm'][:] = wv_cont_apbl_sum_yearly_mm
-#        of['wv_cont_apbl_sum_yearly_mm'].fill_value = -9999.0
-#        
-#        of.createVariable('wv_cont_apbl_sum_yearly_pct', 'f4', ('i_cross', 'j_cross'))
-#        of['wv_cont_apbl_sum_yearly_pct'].long_name = '% contribution above PBL of each cell to all rain in the domain'
-#        of['wv_cont_apbl_sum_yearly_pct'].units = '%'
-#        of['wv_cont_apbl_sum_yearly_pct'][:] = wv_cont_apbl_sum_yearly_pct
-#        of['wv_cont_apbl_sum_yearly_pct'].fill_value = -9999.0
+    ofile = dir_out+region+'/100parcels/TS10min/Processed/Yearly/'+region+'_'+str(year)+'_wvcont.nc'    
+    with Dataset(ofile, 'w', format='NETCDF4_CLASSIC') as of: 
+        of.createDimension('i_cross', n_i)
+        of.createDimension('j_cross', n_j)    
+        of.createDimension('time', len(daylist))
+        
+        of.createVariable('day', 'f4', ('time'))
+        of['day'].long_name = 'days since '
+        of['day'].units = 'days'
+        of['day'][:] = idx
+
+        of.createVariable('latitcrs', 'f4', ('i_cross', 'j_cross'))
+        of['latitcrs'].long_name = 'LATITUDE (SOUTH NEGATIVE)'
+        of['latitcrs'].units = 'degrees'
+        of['latitcrs'][:] = latitcrs
+        
+        of.createVariable('longicrs', 'f4', ('i_cross', 'j_cross'))
+        of['longicrs'].long_name = 'LONGITUDE (WEST NEGATIVE)'
+        of['longicrs'].units = 'degrees'
+        of['longicrs'][:] = longicrs
+        
+        of.createVariable('pre', 'f4', ('time','i_cross', 'j_cross'))
+        of['pre'].long_name = 'precipitation'
+        of['pre'].units = 'mm'
+        of['pre'][:] = pre_grid_daily
+        
+        of.createVariable('wv_cont_sum_yearly_mm', 'f4', ('i_cross', 'j_cross'))
+        of['wv_cont_sum_yearly_mm'].long_name = 'mm contribution of each cell to all rain in the domain'
+        of['wv_cont_sum_yearly_mm'].units = 'mm'
+        of['wv_cont_sum_yearly_mm'][:] = wv_cont_sum_yearly_mm
+        of['wv_cont_sum_yearly_mm'].fill_value = -9999.0
+        
+        of.createVariable('wv_cont_sum_yearly_pct', 'f4', ('i_cross', 'j_cross'))
+        of['wv_cont_sum_yearly_pct'].long_name = '% contribution of each cell to all rain in the domain'
+        of['wv_cont_sum_yearly_pct'].units = '%'
+        of['wv_cont_sum_yearly_pct'][:] = wv_cont_sum_yearly_pct
+        of['wv_cont_sum_yearly_pct'].fill_value = -9999.0
+        
+        of.createVariable('wv_cont_apbl_sum_yearly_mm', 'f4', ('i_cross', 'j_cross'))
+        of['wv_cont_apbl_sum_yearly_mm'].long_name = 'mm contribution above PBL of each cell to all rain in the domain'
+        of['wv_cont_apbl_sum_yearly_mm'].units = 'mm'
+        of['wv_cont_apbl_sum_yearly_mm'][:] = wv_cont_apbl_sum_yearly_mm
+        of['wv_cont_apbl_sum_yearly_mm'].fill_value = -9999.0
+        
+        of.createVariable('wv_cont_apbl_sum_yearly_pct', 'f4', ('i_cross', 'j_cross'))
+        of['wv_cont_apbl_sum_yearly_pct'].long_name = '% contribution above PBL of each cell to all rain in the domain'
+        of['wv_cont_apbl_sum_yearly_pct'].units = '%'
+        of['wv_cont_apbl_sum_yearly_pct'][:] = wv_cont_apbl_sum_yearly_pct
+        of['wv_cont_apbl_sum_yearly_pct'].fill_value = -9999.0
