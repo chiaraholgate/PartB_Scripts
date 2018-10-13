@@ -13,6 +13,8 @@
 ! EXPLANATION OF TIME-RELATED VARIABLES, AND TESTING VALUES
 ! "set"   = user defined values
 ! "calcd" = calculated within program
+! "MM5" has been substituted for "in_data" in variable names. When this program was originally written, it ingested 
+! MM5 data.
 
 ! totdays = 1                                            ! number of days to run simulation forward, based on set start/end dates(calcd)
 ! totbtadays = 3                                         ! number of days to back-track for (set)
@@ -2469,12 +2471,15 @@ INTEGER, INTENT(OUT) :: lev
 INTEGER, DIMENSION(1) :: dummy_lev
 
 !
-!here I use the hydrostatic eqn to calculate the change in pressure given w
+! Here I use the hydrostatic eqn to calculate the change in pressure given w.
+! deltaP = rho*g*deltaz when in hydrostatic equilibrium
 !
 par_pres = par_pres + -1.*(par_pres/(Rd*(1+0.61*mix)*temp))*g*w*tstep*60
 
-!print *,'L2181, par_pres=',par_pres
 
+! Find the model level where the difference in pressure between the parcel
+! and the atmosphere is the smallest, i.e. which height in pres does the 
+! smallest difference occur, where pres dims are (lat,lon,height).
 dummy_lev = MINLOC(ABS(pres - par_pres))
 
 lev = dummy_lev(1)
@@ -2729,7 +2734,7 @@ SUBROUTINE implicit_back_traj_w(u,v,w,temp,pres,lon2d,lat2d, &
 ! Using Merrill's fully implicit  technique
 ! calculate the parcels position one time step before
 !
-!u,v,w should only have 2 time steps in them
+! u,v,w should only have 2 time steps in them
 ! pres should only have the end time step
 
 ! Output parcel lat,lon, height and pressure
@@ -2753,10 +2758,9 @@ REAL :: lon,lat,u_back,v_back,w_par,temp_par,u_for,v_for,pr
 REAL :: pt1,pt2,vfac,pr1,pr2
 INTEGER, DIMENSION(1) :: dummy_lev
 
-
-
 !
-!get u and v at parcel location
+! Get u and v at parcel location, by interpolating in time (current and previous parcel timestep), and
+! space (parcel lat/lon and lat/lon of the nearest grid point).
 !
 lon = par_lon
 lat = par_lat
@@ -2832,15 +2836,20 @@ PROGRAM back_traj
 ! 1988 and the flood of 1993", Journal of Geophysical Research, 104 D16
 ! pg 19,383-19,397
 !
-! Input data are taken from MM5 output (precip,evap (2D), temp,wind,
-! mixing ratios (3D)). Output data is a map of moisture source for each
-! pixel, each day that rain fell in that pixel.
+! Input data are taken from NARCliM output (precip,evap (2D), temp,wind,
+! mixing ratios (3D)). Data here:
+! /srv/ccrc/data33/z3481416/CCRC-WRF3.6.0.5-SEB/ERA-Interim/R2_nudging/out/
 ! 
-! The output file is dimensioned (rec,lat,lon) where rec is the record
-! number, lat & lon are the sizes of the domain in 
-! the lat and lon directions. Attributes include 
-! location and time and amount of precip in the pixel of interest 
-! (y,x,day,month,year,precip) each of which is a 1D array of length rec.
+! The model outputs a daily 2d grid of water vapour contribution of each 
+! grid cell to the precipitation in each cell where it rained. It also
+! outputs the total rainfall depth in each cell where it rained, and the 
+! coordinates of each rain grid cell.
+! 
+! The output file is dimensioned (rec,lat,lon) where rec is the number of 
+! grid cells where it rained that day, lat & lon are the sizes of the domain in 
+! the lat and lon directions. Attributes include location and time and 
+! amount of precip in the pixel of interest (y,x,day,month,year,precip) 
+! each of which is a 1D array of length rec.
 !
 ! Here I have amended the program to read in a list times (in days since
 ! start of simulation) and calculate the back trajectories for the day
@@ -2862,17 +2871,13 @@ IMPLICIT NONE
 !
 !netcdf id variables
 !
-
 INTEGER :: status,headncid
 INTEGER :: spid,ptopid,delxid,latcrsid,loncrsid,terid,tstepid,sdayid,smonid,syearid
 INTEGER :: dimjid,dimiid,sigid,dimkid
 INTEGER :: outncid,wvcid,wvc2id,xlocid,ylocid,dayid,opreid,latid,lonid
 INTEGER :: wsncid, wsid
-!CHARACTER(LEN=50) :: tempdate
-!CHARACTER(LEN=100):: filename_ext
 CHARACTER(LEN=100):: fname
 CHARACTER(LEN=10):: fname_smon, fname_sday
-REAL :: test_jd ! matters that it doesn't give the 0.5 decimal?
 
 !
 !data variables
@@ -2880,11 +2885,6 @@ REAL :: test_jd ! matters that it doesn't give the 0.5 decimal?
 INTEGER :: par_lev
 REAL :: ptop,delx,par_lat,par_lon,par_pres,par_q,new_par_q,end_precip 
 INTEGER :: MM5tstep
-!CHARACTER(LEN=50):: timestep_name
-!integer :: RecordDimID
-
-!REAL :: par_pot_temp 
-!REAL,ALLOCATABLE,DIMENSION(:) :: sigma
 REAL,ALLOCATABLE,DIMENSION(:,:) :: lat2d,lon2d
 REAL,ALLOCATABLE,DIMENSION(:,:) :: terrain,WV_cont,WV_cont_day !pstar, > make 3d
 REAL,ALLOCATABLE,DIMENSION(:,:) :: WV_cont_apbl,WV_cont_day_apbl
@@ -2901,8 +2901,6 @@ INTEGER,ALLOCATABLE,DIMENSION(:) :: par_release
 INTEGER :: xx,yy,tt,nn,mm,npar,orec,x,y,i,ttMM5,nnMM5,ttMM5day
 INTEGER :: xx_omp,threadnum,torec
 REAL :: ttfac,nnfac,precip_here,qfac
-
-!REAL,ALLOCATABLE,DIMENSION(:) :: daylist
 
 INTEGER,ALLOCATABLE,DIMENSION(:,:) :: wsmask
 
@@ -2931,43 +2929,8 @@ print *,"Total number of back-track days=",totbtadays
 print *,"Number of parcels=",nparcels
 print *,"Simulation time step (mins)=",tstep
 
-STOP
 
-! read in list of days for qibt
-!
-!print *,"get days to analyse from ",TRIM(diri)//TRIM(fdaylist)
-
-!ALLOCATE(daylist(totdays),STAT = status)
-!ALLOCATE(totdays,STAT = status)
-!open(unit=15,file=TRIM(diri)//TRIM(fdaylist),IOSTAT=status)
-!print *,'status = ',status
-!if (status /= 0) then
-!  print *,"could not get "//TRIM(diri)//TRIM(fdaylist)
-!  stop
-!endif
-
-! do i = 1,totdays
-!   read(15,*) daylist(i)
-! end do
-! !print *,daylist
-! close(15)
-
-
-!
-!convert from 0 based array indexes to 1 based ! >> not necessary, testing days of rain [1,2,3]
-!
-!daylist = daylist + 1
-
-!test
-!
-!daylist(1) = 2200
-!
-!test
-
-! loading header file stuff-------------------------------------------
-!
-! open MM5 header file
-!
+! Get header info from first input file -------------------------------------------
 
 if (smon<10) then
 fname_smon="0"//TRIM(int_to_string(smon))
@@ -2986,23 +2949,9 @@ print *,'Get header info from first input file: ',fname
 status = NF90_OPEN(TRIM(dirdata_atm)//fname, NF90_NOWRITE, headncid)
 if (status /= NF90_NOERR) call handle_err(status)
 
-! header_psfc="wrfhrly_d01_"//TRIM(int_to_string(syear))//"-"//TRIM(fname_smon)//"-"//TRIM(fname_sday)//"_00:00:00_PSFC.nc"
-! !print *,'Get surface pressure header info from first input file: ',header_psfc
-! status = NF90_OPEN(TRIM(dirdata_land)//header_psfc, NF90_NOWRITE, headpsfcncid)
-! if (status /= NF90_NOERR) call handle_err(status)
-
 !
-!get ids for required variables from header
-!
-!status = nf90_inquire(headncid, unlimitedDimId = RecordDimID)
-!if (status /= nf90_noerr) call handle_err(status)
+! Get ids for required variables from header
 
-!status = NF90_INQ_DIMID(headncid,"bottom_top",sigid)
-!if(status /= nf90_NoErr) call handle_err(status)
-
- 
-! status = nf90_inq_varid(headpsfcncid, "PSFC", spid)  !surface pressure reference (Pa)
-! if(status /= nf90_NoErr) call handle_err(status)
 status = nf90_inq_varid(headncid, "P_TOP", ptopid)  !top pressure in model (Pa)
 if(status /= nf90_NoErr) call handle_err(status)
 status = nf90_inquire_attribute(headncid, nf90_global, "DX", delxid)  !grid distance (m)
@@ -3015,11 +2964,9 @@ status = nf90_inq_varid(headncid, "HGT", terid)  !model terrain (m)
 if(status /= nf90_NoErr) call handle_err(status)
 status = nf90_inq_dimid(headncid, "Time", tstepid)  !number of time steps in file
 if(status /= nf90_NoErr) call handle_err(status)
-!status = nf90_inq_varid(headncid, "ZNW", sigid)  !sigma vertical levels...not sure this is the correct variable
-!if(status /= nf90_NoErr) call handle_err(status)
 
 !
-!read in 1d variables
+! Read in 1d variables
 !
 status = nf90_get_var(headncid, ptopid, ptop)
 if(status /= nf90_NoErr) call handle_err(status)
@@ -3037,8 +2984,6 @@ if(status /= nf90_NoErr) call handle_err(status)
 
 dim_k=dim_k-1
 
-
-!
 !switch from dots to crosses
 fdim_i = fdim_i-1
 fdim_j = fdim_j-1
@@ -3046,9 +2991,7 @@ fdim_j = fdim_j-1
 !print *,fdim_j,fdim_i
 
 
-!
 !get i and j dimensions when ignoring the boundaries
-!
 dim_i = fdim_i - 2*(bdy-1)
 dim_j = fdim_j - 2*(bdy-1)
 !print *,"dim_i=",dim_i,"dim_j=",dim_j,"dim_k=",dim_k
@@ -3056,47 +2999,35 @@ dim_j = fdim_j - 2*(bdy-1)
 !Total number of grid pts inside boundaries
 totpts = (dim_j-2)*(dim_i-2)
 
-!
-!allocate the required arrays
-!
-
+! Allocate the required arrays
 ALLOCATE( terrain(dim_j,dim_i),lon2d(dim_j,dim_i),lat2d(dim_j,dim_i), STAT = status) !sigma(dim_k),pstar(dim_j,dim_i,MM5daysteps), &
  
 !
-!load variables
+! Read in more variables
 !
-!status = nf90_get_var(headncid, spid, pstar,start=(/bdy,bdy/),count=(/dim_j,dim_i/))
-!status = nf90_get_var(headpsfcncid, spid, pstar,start=(/bdy,bdy,1/),count=(/dim_j,dim_i,MM5daysteps/))
-!if(status /= nf90_NoErr) call handle_err(status)
 status = nf90_get_var(headncid, latcrsid, lat2d,start=(/bdy,bdy/),count=(/dim_j,dim_i/))
 if(status /= nf90_NoErr) call handle_err(status)
 status = nf90_get_var(headncid, loncrsid, lon2d,start=(/bdy,bdy/),count=(/dim_j,dim_i/))
 if(status /= nf90_NoErr) call handle_err(status)
 status = nf90_get_var(headncid, terid, terrain,start=(/bdy,bdy/),count=(/dim_j,dim_i/))
 if(status /= nf90_NoErr) call handle_err(status)
-!status = nf90_get_var(headncid, sigid, sigma,start=(/1,1/),count=(/1,dim_k/))
-!status = nf90_get_var(headncid, sigid, sigma,start=(/1/),count=(/dim_k/))
-!if(status /= nf90_NoErr) call handle_err(status)
 
 status = nf90_close(headncid)
 
-!print *,'done header'
+
 !--------------------------------------------------------
 
 !
-!calculate the number of trajectory time steps in a day and in input file time step
+! Calculate the number of trajectory time steps in a day and in input file time step
 !
 daytsteps = 1440/tstep                ! number of sub-daily simulation time steps
-inMM5tsteps = MM5tstep/tstep          ! divide input file time step by the number of simulation time steps
+inMM5tsteps = MM5tstep/tstep          ! divide input file time step by the number of simulation time steps, as they may differ
 totsteps = daytsteps*(totbtadays+1)   ! total number of simulation data time steps to remember
 
 MM5daysteps = 1440/MM5tstep           ! number of input file time steps in day
 MM5totsteps = (MM5daysteps*(totbtadays+1)) + 1 ! total number of input file time steps over the back-track period
 
-!print *,'L2766, daytsteps,MM5tstep,tstep,totbtadays,MM5daysteps,MM5totsteps,totpts,totdays',daytsteps,MM5tstep,tstep,totbtadays,MM5daysteps,MM5totsteps,totpts,totdays
-
-
-!allocate the variable arrays
+! Allocate the variable arrays
 ALLOCATE( precip(dim_j,dim_i,MM5daysteps), &
   evap(dim_j,dim_i,MM5totsteps),u(dim_j,dim_i,dim_k,MM5totsteps), &
   v(dim_j,dim_i,dim_k,MM5totsteps),temp(dim_j,dim_i,dim_k,MM5totsteps), &
@@ -3110,7 +3041,7 @@ ALLOCATE( precip(dim_j,dim_i,MM5daysteps), &
 
   
 !
-!read in watershed mask if required
+! Read in watershed mask if required
 !
 if (wshed) then
   fname=TRIM(diri)//"Masks/"//TRIM(fwshed)
@@ -3129,15 +3060,10 @@ if (wshed) then
   status = nf90_close(wsncid)
 end if
 
-
-
-!
-!total number of grid pts inside boundaries
+! Total number of grid pts inside boundaries
 totpts = (dim_j-2)*(dim_i-2)
 
-
-!
-!set the number of threads to use in the parallel sections
+! Set the number of threads to use in the parallel sections
 call OMP_SET_NUM_THREADS(numthreads)
 print *,'max threads=',omp_get_max_threads()
 
@@ -3147,85 +3073,47 @@ print *,'max threads=',omp_get_max_threads()
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 do dd = 1, totdays
-!do dd = 1, 1
   orec = 0
     
-  !
-  !Get date to open correct input file   !calculate the month and year (and day of month) for the first qibt day
-  call day_month_year(dd) !day_month_year(daylist(dd))
+  !Get date to open correct input file   
+  call day_month_year(dd) 
   print *,"L2850, day,mon,year",day,mon,year  
   
-!   test_jd=julian(year,mon,day)
-!   print *,'L2590, julian day=',test_jd
-  
-  
-  !
-  !create output file (will create empty file even if it didn't rain anywhere in the domain on that day)
-  !call new_out_file(outncid,wvcid,wvc2id,xlocid,ylocid,dayid,opreid,daylist(dd),lat2d,lon2d)
+  ! Create output file (will create empty file even if it didn't rain anywhere in the domain on that day)
   call new_out_file(outncid,wvcid,wvc2id,xlocid,ylocid,dayid,opreid,day,lat2d,lon2d)
   print *,'L2860, created new out file'
 
-  !
-  ! get the variables required for back trajectory calculations for the current day
-  !
+  ! Get the variables required for back trajectory calculations for the current day
   call get_data(precip,evap,u,v,w,temp,mix,mixcld,mixtot,pp,pb,pbl_hgt,psfc)
   
-  print *,'L2950, got data...'
+  print *,'L2950, got data...'    
 
-    
-  !
   ! Calculate the pressure field and surface pressure
   ! In previous (MM5-based) model, surface pressure had to be calculated - not so here, it is output from wrf.
-  ! Pressure at heights is calcualted by adding the base state pressure to the perturbation pressure at each level.
-  ! pp="P"(4d)perturbation pressure. pb="PB"(4d)base state pressure.
-  ! psfc="PSFC"(3d) surface pressure.
-  !pres = pp + ptop + SPREAD(SPREAD(pstar,3,dim_k),4,MM5totsteps) * SPREAD(SPREAD(SPREAD(sigma,1,dim_j),2,dim_i),4,MM5totsteps)
+  ! Pressure at heights is calculated by adding the base state pressure to the perturbation pressure at each level.
+  ! pp="P"(4d)perturbation pressure. pb="PB"(4d)base state pressure. psfc="PSFC"(3d) surface pressure.
   pres = pp + pb
-  !surf_pres = SPREAD(pstar,3,MM5totsteps) + ptop + pp(:,:,dim_k,:)
   surf_pres = psfc
-  print *, 'L3174, pressure field calculated'
-!   print *,'min pp=',minval(pp),'min pp loc=',minloc(pp)
-!   print *,'min pb=',minval(pb),'min pb loc=',minloc(pb)
-!   print *,'min pres=',minval(pres),'min pres loc=',minloc(pres)
-  !print *,'min pp at min pres=',pp(minloc(pres))
-  !print *,'min pb at min pres=',pb(minloc(pres))
-!   print *,'pp=',pp(1,1,1,:)
-!   print *,'pb=',pb(1,1,1,:)
-!   print *,'pres=',pres(1,1,1,:)
-  
-  
-  !
+
   ! calculate the (equivalent) potential temperature field
-  !
   !call calc_pot_temp(temp,pres,pot_temp)
   !call calc_eq_pot_temp(mix,mixtot,temp,pres,pot_temp)
   !DEALLOCATE(temp)
-  !print *, 'L2674, eq potential temperature calculated'
 
-  !
   !calculate the model level just above the boundary layer height
-  !
   !call calc_pbl_lev(pbl_hgt,pres,surf_pres,pbl_lev)
   !print *, 'PBL level calculated'
 
-  !
-  ! calculate the precipitable water accumulated from the ground up on 
-  ! day of interest. This is used to determine the parcel initial height
-  !
+  ! Calculate the precipitable water accumulated from the ground up on day of interest (lat,lon,height,time). 
+  ! This is used to determine the parcel initial height.
   call calc_pw(mixcld(:,:,:,MM5totsteps-MM5daysteps:),pres(:,:,:,MM5totsteps-MM5daysteps:),surf_pres(:,:,MM5totsteps-MM5daysteps:),ptop,pw)
-  print *,'L2984, precipitable water calculated'
-  !
-  !calculate the total precipitable water 
-  !
+
+  ! Calculate the total precipitable water (lat,lon,time).
   call calc_tpw(mixtot,pres,surf_pres,ptop,tpw)  
-  print *,'L2989, total precipitable water calculated'
-  
-    !
-  !calculate the subsection x & y dimensions
-  !
+
+  ! Calculate the subsection x & y dimensions, based on the max distance a parcel can travel in the sim timestep
   ssdim = (ceiling((sqrt(maxval(u)**2+maxval(v)**2)*tstep*60)/delx) *2) + 1
-  !print *,"L2998, ssdim ",ssdim
-  !
+
   !loop over x and y grid points
   !
   
@@ -3278,28 +3166,13 @@ do dd = 1, totdays
     threadnum = OMP_GET_THREAD_NUM()
     !print *,"start",threadnum,xx_omp,xx,yy
     
-    !test
-    !
-    !xx = 3
-    !yy = 78
-    !
-    !test
-
-    !do yy = bdy, dim_i-bdy
-      !
-      !only do something if within watershed, if we care about the watershed
-      !
-
+      ! Only do something if within watershed, if we care about the watershed
       if (wshed) then
         if (wsmask(xx,yy)==0) CYCLE
       end if
 
-      !
-      !only do something if rain fell at this point on this day
-      !      
+      ! Only do something if rain fell at this point on this day
       if (SUM(precip(xx,yy,:))>minpre) then
-      
-        !!print *,'precip at (',xx,',',yy,') = ',SUM(precip(xx,yy,:))
        
         !$OMP CRITICAL (output_index)
         orec = orec + 1
@@ -3313,25 +3186,22 @@ do dd = 1, totdays
 	!$OMP END CRITICAL (output_index)
 	
 	WV_cont_day = 0.
-	!WV_cont_day_apbl = 0.
-	
-	      
-        !-------------------------------------
-        !
-	!do you want to print out statements for debugging etc
-	!
+	!WV_cont_day_apbl = 0.    
+
+	! Do you want to print out statements for debugging etc?
 	if (torec==0) then
 	  print_test = .TRUE.
 	else
 	  print_test = .FALSE.
 	end if
 
-
-	
-        !
-        !determine how many parcels to release today and
-	!use precip distribution to determine when to release parcels
 	!
+    ! Determine how many parcels to release today and use precip 
+    ! distribution to determine when to release parcels.
+    ! The globally set nparcels is just a maximum number of parcels
+    ! to release in each data timestep. We release at least one parcel
+    ! per simulation timestep within a data time step when it rained.
+    !
 	par_release = 0
 	
 	!$OMP CRITICAL (par_rel_time)
@@ -3351,9 +3221,7 @@ do dd = 1, totdays
 	!!!!!!!!!!!!
 	!print *,'par_release ',par_release,threadnum,yy,xx
 	
-	!
-	!go through the days time steps releasing parcels if required
-	!
+
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ! FOR EVERY SIMULATION SUB-DAILY TIMESTEP 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -3361,14 +3229,10 @@ do dd = 1, totdays
 	  if (par_release(tt)==0) then
 	    CYCLE
 	  end if
-	  
-	  !print *,par_release
-	  !print *,'L3013, tt,par_release(tt)=',tt, par_release(tt)
-	  
-	  
-	  
+  
+  
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-! FOR EVERY SUB-DAILY PARCEL RELEASE TIME
+! FOR EVERY PARCEL RELEASE TIME
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	  do mm = 1, par_release(tt)
 	  
@@ -3400,15 +3264,12 @@ do dd = 1, totdays
 	    !the precip produced here at this parcel time step
 	    !
 	    end_precip = precip(xx,yy,ttMM5day)/inMM5tsteps
-	    !print *,'L3089, precip produced at this parcel time step=',end_precip
 	    
 	    !
 	    !determine sigma level from which to release parcel
 	    !
 	    !$OMP CRITICAL (par_rel_height)
-	    !print *,'L3058, calculating parcel release height'
 	    call parcel_release_height(pw(xx,yy,:,tt),par_lev)
-	    !print *,'L3097, parcel release height calculated, par_lev=',par_lev
 	    !$OMP END CRITICAL (par_rel_height)
 	
 	
@@ -3430,12 +3291,10 @@ do dd = 1, totdays
 	    !
 	    par_lat = lat2d(xx,yy)
 	    par_lon = lon2d(xx,yy)
-	    !print *,'par_lat,par_lon=',par_lat,par_lon
 
   
 	    !$OMP CRITICAL (par_q1)
 	    !calculate the parcel mixing ratio
-	    !print *,'L3084, calculating parcel mixing ratio'
 	    par_q = lin_interp(mixtot(xx,yy,par_lev,ttMM5:ttMM5+1),ttfac) 
 	    !$OMP END CRITICAL (par_q1)
 	    
@@ -3456,14 +3315,15 @@ do dd = 1, totdays
 	  
 	     
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-! FOR EACH PARCEL RELEASE TIME, FOR EACH SIMULATED TIME STEP IN THE DAY
+! FOR EACH PARCEL RELEASE TIME, FOR EACH SIMULATION TIME STEP IN THE 
+! WHOLE BACK-TRACK PERIOD
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
 	    do nn = totsteps-daytsteps+tt, 2, -1
 	    !print *,'tt,(totsteps-daytsteps+tt),nn=',tt,totsteps-daytsteps+tt,nn
 	      !
 	      !advect the parcel back in time one step
 	      !
-	      !print *,"nn ",nn,threadnum,par_lev
+
 	      
 	      !current parcel stats
 	      if (eachParcel) then
@@ -3526,6 +3386,7 @@ do dd = 1, totdays
 		!  print *,nnMM5,nnfac,unow(x,y,par_lev,2),vnow(x,y,par_lev,2)
 		!end if
 
+		  ! Find where you are in the nn timeseries
 	      nnMM5 = INT((nn-1)/inMM5tsteps) + 1
 	      nnfac = MOD(nn-1,inMM5tsteps)*1./inMM5tsteps
 	      !print *,'L3217,nn,nnfac=',nn,nnfac
@@ -3584,20 +3445,18 @@ do dd = 1, totdays
 	      			
 	
 	      !
-	      !the water mass contribution of the new grid square, at this time
+	      ! Find the grid cell nearest the new lat,lon of the parcel 
 	      !
 	      !$OMP CRITICAL (near)
 	      call near_pt(lon2d,lat2d,par_lon,par_lat,x,y)
 	      !$OMP END CRITICAL (near)
 	    
-    
+	      !
+	      ! Find the water mass contribution of the new grid square, at this time
+	      !    
 	      !$OMP CRITICAL (new_par_q1)
 	      new_par_q = lin_interp(mixtot(x,y,par_lev,nnMM5:nnMM5+1),nnfac)
 	      !$OMP END CRITICAL (new_par_q1)
-	      
-	      !print *,'L3270, mixtot here,nnfac,new_par_q=',mixtot(x,y,par_lev,nnMM5:nnMM5+1),nnfac,new_par_q
-	      
-	      
 
 	      !
 	      !adjust the q reduction factor if we had a decrease in q
