@@ -2869,6 +2869,7 @@ USE netcdf
 USE global_data
 USE bt_subs
 USE omp_lib
+USE mpi
 
 
 IMPLICIT NONE
@@ -2933,10 +2934,18 @@ LOGICAL :: print_test
 !for outputting the parcel stats for each parcel
 REAL,ALLOCATABLE,DIMENSION(:,:) :: parcel_stats
 
+INTEGER :: mpi_thread_provided, mpi_err, mpi_dd, mpi_dd_window
+INTEGER :: dd_step
 
 !----------------------------------------------------------------
 !
 
+call MPI_Init_thread(MPI_THREAD_FUNNELED, mpi_thread_provided, mpi_err)
+
+! Create a RMA window for the global day number
+mpi_dd = 0
+call MPI_Win_create(mpi_dd, storage_size(mpi_dd, MPI_ADDRESS_KIND) / 8, 1, &
+    MPI_INFO_NULL, MPI_COMM_WORLD, mpi_dd_window, mpi_err)
 
 ! Find total number of days to run simulation for, given input start and end dates
 totdays=simlength(sday,smon,syear,edday,edmon,edyear)
@@ -3159,7 +3168,17 @@ print *,'max threads=',omp_get_max_threads()
 ! FOR EVERY DAY OF THE SIMULATION PERIOD
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-do dd = 1, totdays
+dd_step = 1
+
+do
+    ! Atomically increment the day, so no two ranks run the same day
+    call MPI_Win_lock(MPI_LOCK_EXCLUSIVE, 0, 0, mpi_dd_window, mpi_err)
+    call MPI_Fetch_and_op(dd_step, dd, MPI_INTEGER, 0, 0_8, MPI_SUM, &
+        mpi_dd_window, mpi_err)
+    call MPI_Win_unlock(0, mpi_dd_window, mpi_err)
+
+    if (dd > totdays) exit
+
 !do dd = 1, 1
   orec = 0
     
@@ -3839,5 +3858,6 @@ do dd = 1, totdays
 
 end do
 
+call MPI_Finalize(mpi_err)
 
 END PROGRAM back_traj
