@@ -43,8 +43,8 @@ SAVE
 !*******user modified variables**********************
 !
 
-INTEGER :: sday = 2,smon = 5,syear = 2013    !start day for calculations (INCLUSIVE)
-INTEGER :: edday = 31,edmon = 12,edyear = 2013  !end day for calculations (must be at least one day after start day) (EXCLUSIVE)
+INTEGER :: sday = 24,smon = 6,syear = 1983    !start day for calculations (INCLUSIVE)
+INTEGER :: edday = 1,edmon = 1,edyear = 1984  !end day for calculations (must be at least one day after start day) (EXCLUSIVE)
 INTEGER :: totdays
 INTEGER, PARAMETER :: totbtadays = 30   !number of days of data to keep for bta; i.e. how far back in time to calc.
                                        !must be less than days you have input data for
