@@ -57,10 +57,10 @@ REAL, PARAMETER :: minpre = 2   !min daily precip to deal with (mm)
 
 INTEGER, PARAMETER :: bdy = 6   !boundary layers to ignore; trajectories will be tracked to this boundary
 
-CHARACTER(LEN=50), PARAMETER :: diri = "/srv/ccrc/data03/z3131380/PartB/"   
-CHARACTER(LEN=100), PARAMETER :: diro = "/srv/ccrc/data19/z3131380/PartB/Output/Australia/100parcels/TS10min/"  
-CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/srv/ccrc/data33/z3481416/CCRC-WRF3.6.0.5-SEB/ERA-Interim/R2_nudging/out/"
-CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/srv/ccrc/data03/z3131380/PartB/NARCliM_postprocess/"  
+CHARACTER(LEN=50), PARAMETER :: diri = "/g/data/hh5/tmp/w28/jpe561/back_traj/"   
+CHARACTER(LEN=100), PARAMETER :: diro = "/home/603/cxh603/PhD/PartB/Test_output/Australia/100parcels/TS10min/"  
+CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfout/"
+CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfhrly/"  
 
 INTEGER, PARAMETER :: numthreads = 4   !set the number of parallel openmp threads
 
@@ -3135,11 +3135,11 @@ ALLOCATE( precip(dim_j,dim_i,MM5daysteps), &
 !read in watershed mask if required
 !
 if (wshed) then
-  fname=TRIM(diri)//"Masks/"//TRIM(fwshed)
+  fname=TRIM(diri)//"watershed/"//TRIM(fwshed)
   print *,'using wshed from',fname 
   ALLOCATE( wsmask(dim_j,dim_i), STAT = status )
   
-  status = NF90_OPEN(TRIM(diri)//"Masks/"//TRIM(fwshed), NF90_NOWRITE, wsncid)
+  status = NF90_OPEN(TRIM(diri)//"watershed/"//TRIM(fwshed), NF90_NOWRITE, wsncid)
   if (status /= NF90_NOERR) call handle_err(status)
   
   status = nf90_inq_varid(wsncid, "wsmask", wsid)  !watershed mask
