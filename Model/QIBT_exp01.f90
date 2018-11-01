@@ -43,8 +43,8 @@ SAVE
 !*******user modified variables**********************
 !
 
-INTEGER :: sday = 31,smon = 1,syear = 1979    !start day for calculations (INCLUSIVE)
-INTEGER :: edday = 6,edmon = 2,edyear = 1979  !end day for calculations (must be at least one day after start day) (EXCLUSIVE)
+INTEGER :: sday = 1,smon = 2,syear = 2000    !start day for calculations (INCLUSIVE)
+INTEGER :: edday = 7,edmon = 2,edyear = 2000  !end day for calculations (must be at least one day after start day) (EXCLUSIVE)
 INTEGER :: totdays
 INTEGER, PARAMETER :: totbtadays = 30   !number of days of data to keep for bta; i.e. how far back in time to calc.
                                        !must be less than days you have input data for
@@ -62,7 +62,7 @@ CHARACTER(LEN=100), PARAMETER :: diro = "/home/603/cxh603/PhD/PartB/Test_output/
 CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfout/"
 CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfhrly/"  
 
-INTEGER, PARAMETER :: numthreads = 4   !set the number of parallel openmp threads
+INTEGER, PARAMETER :: numthreads = 8   !set the number of parallel openmp threads
 
 !CHARACTER(LEN=50), PARAMETER :: fdaylist = "top300precip_days_min0.5.txt"   !file containing
 !CHARACTER(LEN=50), PARAMETER :: fdaylist = "days_of_rain.txt"   !file containing list of days to do qibt on
