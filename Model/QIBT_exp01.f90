@@ -2943,7 +2943,7 @@ INTEGER :: dd_step
 call MPI_Init_thread(MPI_THREAD_FUNNELED, mpi_thread_provided, mpi_err)
 
 ! Create a RMA window for the global day number
-mpi_dd = 0
+mpi_dd = 1 ! Start at day 1 (not zero)
 call MPI_Win_create(mpi_dd, storage_size(mpi_dd, MPI_ADDRESS_KIND) / 8, 1, &
     MPI_INFO_NULL, MPI_COMM_WORLD, mpi_dd_window, mpi_err)
 
