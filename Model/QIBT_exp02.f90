@@ -2523,7 +2523,13 @@ lat = lat + v*tstep*60/(deg_dist*1000)
 !
 !calculate new lon
 !
-lon = lon + u*tstep*60/(cos(lat*pi/180)*deg_dist*1000)
+lon2 = lon + u*tstep*60/(cos(lat*pi/180)*deg_dist*1000)
+! This assumes the input data ranges in lon between 0deg and 360deg. Our data ranges
+! between -180deg and +180deg. If calc's lon is >180deg, translate it.
+if (lon2>=180) then
+	lon2 = (lon + u*tstep*60/(cos(lat*pi/180)*deg_dist*1000)) - 360
+	lon = lon2
+end if 
 
 END SUBROUTINE advect
 
