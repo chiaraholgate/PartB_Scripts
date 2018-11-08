@@ -60,7 +60,7 @@ REAL, PARAMETER :: minpre = 2   !min daily precip to deal with (mm)
 INTEGER, PARAMETER :: bdy = 6   !boundary layers to ignore; trajectories will be tracked to this boundary
 
 CHARACTER(LEN=50), PARAMETER :: diri = "/srv/ccrc/data03/z3131380/PartB/"   
-CHARACTER(LEN=100), PARAMETER :: diro = "/srv/ccrc/data03/z3131380/PartB/Output/Australia/100parcels/TS10min/"  
+CHARACTER(LEN=100), PARAMETER :: diro = "/srv/ccrc/data03/z3131380/PartB/Output/Australia/100parcels/TS10min/Test_output/"  
 CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/srv/ccrc/data33/z3481416/CCRC-WRF3.6.0.5-SEB/ERA-Interim/R2_nudging/out/"
 CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/srv/ccrc/data03/z3131380/PartB/NARCliM_postprocess/"  
 
