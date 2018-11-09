@@ -3828,6 +3828,12 @@ do
  	if(status /= nf90_NoErr) call handle_err(status)
 	status = nf90_put_var(outncid,opreid,SUM(precip(xx,yy,:)),start=(/torec/))
 	if(status /= nf90_NoErr) call handle_err(status)
+	
+	! Raijin taking about 2h before wrting to disk. It may be using a large buffer, keeping results 
+	! file in memory and only writing out to disk once file gets too big? Make it manually write to disk:
+	status = nf90_sync(outncid)
+	if(status /= nf90_NoErr) call handle_err(status)
+	
 	!$OMP END CRITICAL (output)
 
 ! 	else
