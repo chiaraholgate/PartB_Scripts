@@ -59,12 +59,12 @@ REAL, PARAMETER :: minpre = 2   !min daily precip to deal with (mm)
 
 INTEGER, PARAMETER :: bdy = 6   !boundary layers to ignore; trajectories will be tracked to this boundary
 
-CHARACTER(LEN=50), PARAMETER :: diri = "/srv/ccrc/data03/z3131380/PartB/"   
-CHARACTER(LEN=100), PARAMETER :: diro = "/srv/ccrc/data03/z3131380/PartB/Output/Australia/100parcels/TS10min/Test_output/"  
-CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/srv/ccrc/data33/z3481416/CCRC-WRF3.6.0.5-SEB/ERA-Interim/R2_nudging/out/"
-CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/srv/ccrc/data03/z3131380/PartB/NARCliM_postprocess/"  
+CHARACTER(LEN=50), PARAMETER :: diri = "/g/data/hh5/tmp/w28/jpe561/back_traj/"   
+CHARACTER(LEN=100), PARAMETER :: diro = "/home/603/cxh603/PhD/PartB/Test_output/Australia/100parcels/TS10min/TestC/"  
+CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfout/"
+CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfhrly/"  
 
-INTEGER, PARAMETER :: numthreads = 8   !set the number of parallel openmp threads
+INTEGER, PARAMETER :: numthreads = 16   !set the number of parallel openmp threads
 
 !CHARACTER(LEN=50), PARAMETER :: fdaylist = "top300precip_days_min0.5.txt"   !file containing
 !CHARACTER(LEN=50), PARAMETER :: fdaylist = "days_of_rain.txt"   !file containing list of days to do qibt on
@@ -2523,12 +2523,11 @@ lat = lat + v*tstep*60/(deg_dist*1000)
 !
 !calculate new lon
 !
-lon2 = lon + u*tstep*60/(cos(lat*pi/180)*deg_dist*1000)
+lon = lon + u*tstep*60/(cos(lat*pi/180)*deg_dist*1000)
 ! This assumes the input data ranges in lon between 0deg and 360deg. Our data ranges
 ! between -180deg and +180deg. If calc's lon is >180deg, translate it.
-if (lon2>=180) then
-	lon2 = (lon + u*tstep*60/(cos(lat*pi/180)*deg_dist*1000)) - 360
-	lon = lon2
+if (lon>=180) then
+	lon = (lon + u*tstep*60/(cos(lat*pi/180)*deg_dist*1000)) - 360
 end if 
 
 END SUBROUTINE advect
