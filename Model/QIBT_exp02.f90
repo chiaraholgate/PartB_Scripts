@@ -1745,6 +1745,42 @@ if (totbtadays>1) then
 		! close the netcdf file
 		status = nf90_close(ncid)
 	end do
+	
+	! Get julian day for day after sim day (1st timestep needed) and open the corresponding input file
+	jd_before = jd_today+1
+	call gregorian(jd_before,new_y,new_m,new_d)
+	call get_filename(new_d,new_m,new_y,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
+	call open_mixtot_netcdf_files(ncid,clwid,rnwid,snowid,iceid,filename_ext_atm)
+
+	status = nf90_get_var(ncid, clwid, temp(:,:,:,1), &
+	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))    
+	if(status /= nf90_NoErr) call handle_err(status)
+	
+	clw(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+
+	status = nf90_get_var(ncid, rnwid, temp(:,:,:,1), &
+	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
+	if(status /= nf90_NoErr) call handle_err(status)
+	
+	rnw(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+
+	status = nf90_get_var(ncid, snowid, temp(:,:,:,1), &
+	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
+	if(status /= nf90_NoErr) call handle_err(status)
+	
+	snow(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+
+	status = nf90_get_var(ncid, iceid, temp(:,:,:,1), &
+	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
+	if(status /= nf90_NoErr) call handle_err(status)
+	
+	ice(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+	
+	! close the netcdf file
+	status = nf90_close(ncid)
+	
+	print *,'L1100, Input file of next day (1st time step) loaded successfully:',filename_ext_atm
+	
 else
 	! Open the first day input file ONLY
 	status = nf90_get_var(ncid, clwid, temp(:,:,:,:), &
