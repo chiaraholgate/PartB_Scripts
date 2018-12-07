@@ -1258,47 +1258,47 @@ else
 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,1/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	status = nf90_get_var(ncid, qid, temp(:,:,:,MM5totsteps), &
+	status = nf90_get_var(ncid, qid, temp(:,:,:,1), &
 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	q(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,MM5totsteps)
+	q(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
 
-	status = nf90_get_var(ncid, uid, temp(:,:,:,MM5totsteps), &
+	status = nf90_get_var(ncid, uid, temp(:,:,:,1), &
 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	u(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,MM5totsteps)
+	u(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
 
-	status = nf90_get_var(ncid, vid, temp(:,:,:,MM5totsteps), &
+	status = nf90_get_var(ncid, vid, temp(:,:,:,1), &
 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	v(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,MM5totsteps)
+	v(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
 
-	status = nf90_get_var(ncid, wid, temp(:,:,:,MM5totsteps), &
+	status = nf90_get_var(ncid, wid, temp(:,:,:,1), &
 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	w(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,MM5totsteps)
+	w(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
 
-	status = nf90_get_var(ncid, tid, temp(:,:,:,MM5totsteps), &
+	status = nf90_get_var(ncid, tid, temp(:,:,:,1), &
 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	t(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,MM5totsteps)
+	t(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
 
-	status = nf90_get_var(ncid, ppid, temp(:,:,:,MM5totsteps), &
+	status = nf90_get_var(ncid, ppid, temp(:,:,:,1), &
 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	pp(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,MM5totsteps)
+	pp(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
 	
-	status = nf90_get_var(ncid, pbid, temp(:,:,:,MM5totsteps), &
+	status = nf90_get_var(ncid, pbid, temp(:,:,:,1), &
 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	pb(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,MM5totsteps)
+	pb(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
 
 	status = nf90_get_var(ncid, pblid, pbl_hgt(:,:,MM5totsteps), &
 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,1/))
