@@ -45,8 +45,8 @@ SAVE
 !*******user modified variables**********************
 !
 
-INTEGER :: sday = 31,smon = 1,syear = 1979    !start day for calculations
-INTEGER :: edday = 1,edmon = 2,edyear = 1979  !end day for calculations (must be at least one day after start day)
+INTEGER :: sday = 1,smon = 2,syear = 2000    !start day for calculations
+INTEGER :: edday = 8,edmon = 2,edyear = 2000  !end day for calculations (must be at least one day after start day)
 INTEGER :: totdays
 INTEGER, PARAMETER :: totbtadays = 30   !number of days of data to keep for bta; i.e. how far back in time to calc.
                                        !must be less than days you have input data for
@@ -582,7 +582,7 @@ INTEGER, INTENT(IN) :: d
 INTEGER, INTENT(IN) :: mn, yr
 CHARACTER(LEN=100), INTENT(OUT) :: filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P
 
-if (mon<10) then
+if (mn<10) then
   if (d<10) then
     filename_ext_atm = "wrfout_d01_"//TRIM(int_to_string(yr))//"-0"//TRIM(int_to_string(mn))//"-0"//TRIM(int_to_string(d))//"_00:00:00"
     filename_ext_RAIN = "wrfhrly_d01_"//TRIM(int_to_string(yr))//"-0"//TRIM(int_to_string(mn))//"-0"//TRIM(int_to_string(d))//"_00:00:00_RAIN.nc"
@@ -3049,11 +3049,11 @@ ALLOCATE( precip(dim_j,dim_i,MM5daysteps), &
 ! Read in watershed mask if required
 !
 if (wshed) then
-  fname=TRIM(diri)//"Masks/"//TRIM(fwshed)
+  fname=TRIM(diri)//"watershed/"//TRIM(fwshed)
   print *,'using wshed from',fname 
   ALLOCATE( wsmask(dim_j,dim_i), STAT = status )
   
-  status = NF90_OPEN(TRIM(diri)//"Masks/"//TRIM(fwshed), NF90_NOWRITE, wsncid)
+  status = NF90_OPEN(TRIM(diri)//"watershed/"//TRIM(fwshed), NF90_NOWRITE, wsncid)
   if (status /= NF90_NOERR) call handle_err(status)
   
   status = nf90_inq_varid(wsncid, "wsmask", wsid)  !watershed mask
@@ -3284,7 +3284,7 @@ do dd = 1, totdays
 
 	    
 	    if (print_test) then
-	    print *,"day,par_lev,xx,yy,tt ",dd,par_lev,xx,yy,tt,threadnum
+	    !print *,"day,par_lev,xx,yy,tt ",dd,par_lev,xx,yy,tt,threadnum
 	    end if
 	    
 	    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!	    
@@ -3505,7 +3505,7 @@ do dd = 1, totdays
 	      
 	      !print *,threadnum,x,y,par_lev,SUM(WV_cont),lin_interp(tpw(x,y,nnMM5:nnMM5+1),nnfac),lin_interp(evap(x,y,nnMM5:nnMM5+1),nnfac),unow(x,y,par_lev,1),vnow(x,y,par_lev,1)
 	      if (print_test) then
-	      print *,"what",x,y,par_lev,SUM(WV_cont),SUM(WV_cont_apbl),threadnum
+	      !print *,"what",x,y,par_lev,SUM(WV_cont),SUM(WV_cont_apbl),threadnum
               end if
 	     
 	     
@@ -3522,7 +3522,7 @@ do dd = 1, totdays
 	      !
 	      !if (SUM(WV_cont + WV_cont_apbl)>=1.) then
 	      if (SUM(WV_cont)>=1.) then
-	      print *,"all precip accounted (torec,wv_cont) ",torec,SUM(WV_cont + WV_cont_apbl)
+	      !print *,"all precip accounted (torec,wv_cont) ",torec,SUM(WV_cont + WV_cont_apbl)
 		!if (par_lev >= pbl_lev(x,y,nnMM5+1)) then
 		  WV_cont(x,y) = WV_cont(x,y) - (SUM(WV_cont) - 1)
 		!WV_cont(x,y) = WV_cont(x,y) - (SUM(WV_cont+WV_cont_apbl) - 1)
@@ -3551,20 +3551,20 @@ do dd = 1, totdays
 	      !outside and go to next parcel
 	      !
 	      if (x<2) then
-	        print *,"hit boundary (orec,wv_cont)",torec,SUM(WV_cont)
+	        !print *,"hit boundary (orec,wv_cont)",torec,SUM(WV_cont)
 	        WV_cont(1,y) = 1. - SUM(WV_cont)
 	        EXIT
 	      else if (x>dim_j-2) then
-	        print *,"hit boundary (orec,wv_cont)",torec,SUM(WV_cont)
+	        !print *,"hit boundary (orec,wv_cont)",torec,SUM(WV_cont)
 	        WV_cont(dim_j,y) = 1. - SUM(WV_cont)
 	        EXIT
 	      end if
 	      if (y<2) then
-	        print *,"hit boundary (orec,wv_cont)",torec,SUM(WV_cont)
+	        !print *,"hit boundary (orec,wv_cont)",torec,SUM(WV_cont)
 	        WV_cont(x,1) = 1. - SUM(WV_cont)
 	        EXIT
 	      else if (y>dim_i-2) then
-	        print *,"hit boundary (orec,wv_cont)",torec,SUM(WV_cont)
+	        !print *,"hit boundary (orec,wv_cont)",torec,SUM(WV_cont)
 	        WV_cont(x,dim_i) = 1. - SUM(WV_cont)
 	        EXIT
 	      end if
@@ -3614,7 +3614,7 @@ do dd = 1, totdays
 	      !
 	      if (nn==2) then
 	        !print *,"couldn't go back far enough in time.(day,time,orec,lev,xx,yy,x,y,%)",dd,tt,torec,par_lev,xx,yy,x,y,SUM(WV_cont+WV_cont_apbl),threadnum
-	        print *,"L3506, couldn't go back far enough in time.(day,time,orec,lev,xx,yy,x,y,%)",dd,tt,torec,par_lev,xx,yy,x,y,SUM(WV_cont),threadnum
+	        !print *,"L3506, couldn't go back far enough in time.(day,time,orec,lev,xx,yy,x,y,%)",dd,tt,torec,par_lev,xx,yy,x,y,SUM(WV_cont),threadnum
 	      
 	        if (SUM(WV_cont)<0) STOP
 		!if (SUM(WV_cont+WV_cont_apbl)<0) STOP
@@ -3627,7 +3627,7 @@ do dd = 1, totdays
 	    !WV_cont_day_apbl = WV_cont_day_apbl + WV_cont_apbl/npar
 	  
 	    if (print_test) then
-	    print *,'end2',sum(WV_cont_day),sum(WV_cont_day_apbl),SUM(WV_cont+WV_cont_apbl)
+	    !print *,'end2',sum(WV_cont_day),sum(WV_cont_day_apbl),SUM(WV_cont+WV_cont_apbl)
 	    end if
 	  
 	    if (par_lev==0) STOP
