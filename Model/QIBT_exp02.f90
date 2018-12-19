@@ -2,66 +2,50 @@
 ! This program calculates the quasi-isentropic back trajectories of
 ! water vapor using a method based on Dirmeyer & Brubaker, 1999,
 ! "Contrasting evaporative moisture sources during the drought of
-! 1988 and the flood of 1993", Journal of Geophysical Research, 104 D16
-! pg 19,383-19,397.
+! 1988 and the flood of 1993", Journal of Geophysical Research,
+! 104 D16 pg 19,383-19,397.
 !
-!%%%%%%% INPUT DATA %%%%%%%
+!%%%%%%% INPUT %%%%%%%
 ! Input data are taken from NARCliM output (precip,evap (2D), temp,wind,
 ! mixing ratios (3D)). 
 ! Data here:
 ! /srv/ccrc/data33/z3481416/CCRC-WRF3.6.0.5-SEB/ERA-Interim/R2_nudging/out/
-! And copied to here:
-! 
-! The model outputs a daily 2d grid of water vapour contribution of each 
+! And copied to here: /g/data/hh5/tmp/w28/jpe561/back_traj/
+!! NOTE: INPUT DATA VERTICAL LEVELS ARE THE REVERSE OF WHAT IS EXPECTED BY THE FUNCTIONS.
+! MODEL EXPECTS VERTICAL LEVELS TO RANGE FROM HIGHEST ATMOSPHERIC LEVEL TO LOWEST.
+! CURRENT INPUT DATA GIVES OPPOSITE - LEVELS REVERSED WHEN LOADING INPUT DATA.
+! MODEL EXPECTS INPUT DATA RANGE BETWEEN -180deg and +180deg.
+
+!%%%%%%% OUTPUT %%%%%%%
+! The program outputs a daily 2d grid of water vapour contribution of each 
 ! grid cell to the precipitation in each cell where it rained. It also
 ! outputs the total rainfall depth in each cell where it rained, and the 
 ! coordinates of each rain grid cell.
 ! 
 ! The output file is dimensioned (rec,lat,lon) where rec is the number of 
-! grid cells where it rained that day, lat & lon are the sizes of the domain in 
-! the lat and lon directions. Attributes include location and time and 
-! amount of precip in the pixel of interest (y,x,day,month,year,precip) 
-! each of which is a 1D array of length rec.
+! grid cells where it rained that day, lat & lon are the sizes of the 
+! domain in the lat and lon directions. Attributes include location and 
+! time and amount of precip in the pixel of interest 
+! (y,x,day,month,year,precip) each of which is a 1D array of length rec.
 !
-! Here I have amended the program to read in a list times (in days since
-! start of simulation) and calculate the back trajectories for the day
-! centered around the given time
-!
-! Here I have changed it so that parcels follow equivalent potential
-! temperature surfaces within the PBL and is advected usign w above that
-!-------------------------------------------------------------------
 
-
-! These routines are used to perform a quasi-isentropic back trajectory
-! analysis of water vapor sources based on output from an MM5 run.
-!
-!here I am d&b but with w not istentropes
-
-
-! NOTE: INPUT DATA VERTICAL LEVELS ARE THE REVERSE OF WHAT IS EXPECTED BY THE FUNCTIONS.
-! MODEL EXPECTS VERTICAL LEVELS TO RANGE FROM HIGHEST ATMOSPHERIC LEVEL TO LOWEST.
-! CURRENT INPUT DATA GIVES OPPOSITE - LEVELS REVERSED WHEN LOADING INPUT DATA.
-! MODEL EXPECTS INPUT DATA RANGE BETWEEN -180deg and +180deg.
-
-!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-! EXPLANATION OF TIME-RELATED VARIABLES, AND TESTING VALUES
+!%%%%%%% EXPLANATION OF TIME-RELATED VARIABLES %%%%%%%
 ! "set"   = user defined values
 ! "calcd" = calculated within program
-! "MM5" has been substituted for "in_data" in variable names. When this program was originally written, it ingested 
-! MM5 data.
 
-! totdays = 1                                            ! number of days to run simulation forward, based on set start/end dates(calcd)
-! totbtadays = 3                                         ! number of days to back-track for (set)
-! tstep = 30                                             ! number of minutes for back-track time step (set)
-! daytsteps = 1440/tstep = 48                            ! number of simulation time steps in a day (calcd)
-! totsteps = daytsteps*(totbtadays+1) = 192             ! total number of simulation time steps over period (calcd)
-! MM5tstep = 180                                         ! input file time step in minutes (set)
-! MM5daysteps = 1440/MM5tstep = 8                        ! number of input file time steps in a day (calcd)
-! inMM5tsteps = MM5tstep/tstep = 6                       ! number of simulation time steps per input time step  (calcd)
-! MM5totsteps = (MM5daysteps*(totbtadays+1)) + 1 = 33   ! total number of input time steps over the back-track period (calcd)
+
+! totdays =  number of days to run simulation forward, based on set start/end dates(calcd)
+! totbtadays = number of days to back-track for (set)
+! tstep = number of minutes for back-track time step (set)
+! daytsteps = 1440/tstep = 48 = number of simulation time steps in a day (calcd)
+! totsteps = daytsteps*(totbtadays+1) = total number of simulation time steps over period (calcd)
+! datatstep = 180 = input file time step in minutes (set)
+! datadaysteps = 1440/datatstep = 8 = number of input file time steps in a day (calcd)
+! indatatsteps = datatstep/tstep = number of simulation time steps per input time step  (calcd)
+! datatotsteps = (datadaysteps*(totbtadays+1)) + 1 = total number of input time steps over the back-track period (calcd)
 !.............we want the event day + totbtadays before it + the time step after ! (ie 0 hour time step which is the last in each file)
-! ttMM5day = = ((tt-1)/inMM5tsteps) + 1 = 1              ! position of parcel time step in input file (calcd)
-! ttMM5 = MM5totsteps - MM5daysteps - 1 + ttMM5day = 17  ! input file time step from the beginning of the loaded files (calcd)
+! ttdataday = = ((tt-1)/indatatsteps) + 1 = position of parcel time step in input file (calcd)
+! ttdata = datatotsteps - datadaysteps - 1 + ttdataday = input file time step from the beginning of the loaded files (calcd)
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -121,7 +105,7 @@ LOGICAL, PARAMETER :: eachParcel = .TRUE.   !output the data along the trajector
 !****************************************************
 !
 
-INTEGER :: daytsteps,totsteps,inMM5tsteps,MM5daysteps,MM5totsteps
+INTEGER :: daytsteps,totsteps,indatatsteps,datadaysteps,datatotsteps
 INTEGER :: dim_i,dim_j,dim_k,fdim_i,fdim_j,ssdim
 !INTEGER :: sday,smon,syear
 INTEGER :: mon,year,dd,totpts
@@ -139,7 +123,7 @@ REAL, PARAMETER :: Cl = 4400     !heat capacity of liquid water at ~-20C (J/kgK)
 REAL, PARAMETER :: pi = 3.14159265
 REAL, PARAMETER :: deg_dist = 111.   !average distance of 1 degree lat is assumed to be 111km
 
-COMMON /global_vars/ daytsteps,totsteps,inMM5tsteps,MM5daysteps,MM5totsteps, &
+COMMON /global_vars/ daytsteps,totsteps,indatatsteps,datadaysteps,datatotsteps, &
 		dim_i,dim_j,dim_k,sday,smon,syear,mon,year,day,dd,totpts, &
 		fdim_i,fdim_j,ssdim
 
@@ -890,7 +874,7 @@ IMPLICIT NONE
 
 REAL, DIMENSION(:,:,:) :: precip,evap,pbl_hgt,psfc
 REAL, DIMENSION(:,:,:,:) :: u,v,w,t,q,qc,qt,pp,pb
-REAL, DIMENSION(SIZE(u,1),SIZE(u,2),SIZE(u,3),MM5daysteps) :: temp
+REAL, DIMENSION(SIZE(u,1),SIZE(u,2),SIZE(u,3),datadaysteps) :: temp
 
 CHARACTER(LEN=100) :: filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P
 
@@ -919,7 +903,7 @@ else
   dayend = day
 end if
   
-! Since our input files only consist of one day, open all timesteps (MM5daysteps) in file (i.e. remove sind2, make it 1)
+! Since our input files only consist of one day, open all timesteps (datadaysteps) in file (i.e. remove sind2, make it 1)
 
 !!! SIM DAY SHOULD BE AT THE END OF THE ARRAY, DAY BEFORE JUST BEFORE THAT, ETC.
 !!! LAST BACK-TRACKED DAY SHOULD BE AT THE START OF THE ARRAY.
@@ -928,61 +912,61 @@ end if
 if (totbtadays>1) then
 	! Open the first day input file
 	status = nf90_get_var(prencid, preid, precip, &
-	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,MM5daysteps/))
+	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	status = nf90_get_var(lhncid, lhid, evap(:,:,(MM5totsteps-MM5daysteps):(MM5totsteps-1)), &
-	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,MM5daysteps/))
+	status = nf90_get_var(lhncid, lhid, evap(:,:,(datatotsteps-datadaysteps):(datatotsteps-1)), &
+	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
 	status = nf90_get_var(ncid, qid, temp(:,:,:,:), &
-	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	q(:,:,:,(MM5totsteps-MM5daysteps):(MM5totsteps-1)) = temp(:,:,dim_k:1:-1,:)
+	q(:,:,:,(datatotsteps-datadaysteps):(datatotsteps-1)) = temp(:,:,dim_k:1:-1,:)
 
 	status = nf90_get_var(ncid, uid, temp(:,:,:,:), &
-	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	u(:,:,:,(MM5totsteps-MM5daysteps):(MM5totsteps-1)) = temp(:,:,dim_k:1:-1,:)
+	u(:,:,:,(datatotsteps-datadaysteps):(datatotsteps-1)) = temp(:,:,dim_k:1:-1,:)
 
 	status = nf90_get_var(ncid, vid, temp(:,:,:,:), &
-	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	v(:,:,:,(MM5totsteps-MM5daysteps):(MM5totsteps-1)) = temp(:,:,dim_k:1:-1,:)
+	v(:,:,:,(datatotsteps-datadaysteps):(datatotsteps-1)) = temp(:,:,dim_k:1:-1,:)
 
 	status = nf90_get_var(ncid, wid, temp(:,:,:,:), &
-	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	w(:,:,:,(MM5totsteps-MM5daysteps):(MM5totsteps-1)) = temp(:,:,dim_k:1:-1,:)
+	w(:,:,:,(datatotsteps-datadaysteps):(datatotsteps-1)) = temp(:,:,dim_k:1:-1,:)
 
 	status = nf90_get_var(ncid, tid, temp(:,:,:,:), &
-	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	t(:,:,:,(MM5totsteps-MM5daysteps):(MM5totsteps-1)) = temp(:,:,dim_k:1:-1,:)
+	t(:,:,:,(datatotsteps-datadaysteps):(datatotsteps-1)) = temp(:,:,dim_k:1:-1,:)
 
 	status = nf90_get_var(ncid, ppid, temp(:,:,:,:), &
-	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	pp(:,:,:,(MM5totsteps-MM5daysteps):(MM5totsteps-1)) = temp(:,:,dim_k:1:-1,:)
+	pp(:,:,:,(datatotsteps-datadaysteps):(datatotsteps-1)) = temp(:,:,dim_k:1:-1,:)
 	
 	status = nf90_get_var(ncid, pbid, temp(:,:,:,:), &
-	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	pb(:,:,:,(MM5totsteps-MM5daysteps):(MM5totsteps-1)) = temp(:,:,dim_k:1:-1,:)
+	pb(:,:,:,(datatotsteps-datadaysteps):(datatotsteps-1)) = temp(:,:,dim_k:1:-1,:)
 
-	status = nf90_get_var(ncid, pblid, pbl_hgt(:,:,(MM5totsteps-MM5daysteps):), &
-	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,MM5daysteps/))
+	status = nf90_get_var(ncid, pblid, pbl_hgt(:,:,(datatotsteps-datadaysteps):), &
+	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	status = nf90_get_var(psfcncid, psfcid, psfc(:,:,(MM5totsteps-MM5daysteps):), &
-	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,MM5daysteps/))
+	status = nf90_get_var(psfcncid, psfcid, psfc(:,:,(datatotsteps-datadaysteps):), &
+	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
 	if(status /= nf90_NoErr) call handle_err(status)
 
 	! close the netcdf files
@@ -1007,62 +991,62 @@ if (totbtadays>1) then
 		call get_filename(new_d,new_m,new_y,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
 		call open_netcdf_files(ncid,prencid,lhncid,psfcncid,preid,lhid,uid,vid,wid,tid,qid,ppid,pbid,pblid,psfcid,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
 
-		status = nf90_get_var(lhncid, lhid, evap(:,:,MM5totsteps-(MM5daysteps*(i+1)):(MM5totsteps-(MM5daysteps*i)-1)), &
-		start=(/bdy,bdy,1/),count=(/dim_j,dim_i,MM5daysteps/))
+		status = nf90_get_var(lhncid, lhid, evap(:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)), &
+		start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
 		if(status /= nf90_NoErr) call handle_err(status)
 		
 		status = nf90_get_var(ncid, qid, temp(:,:,:,:), &
-		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 		if(status /= nf90_NoErr) call handle_err(status)
 		
-		q(:,:,:,MM5totsteps-(MM5daysteps*(i+1)):(MM5totsteps-(MM5daysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
+		q(:,:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
 
 		status = nf90_get_var(ncid, uid, temp(:,:,:,:), &
-		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 		if(status /= nf90_NoErr) call handle_err(status)
 		
-		u(:,:,:,MM5totsteps-(MM5daysteps*(i+1)):(MM5totsteps-(MM5daysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
+		u(:,:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
 
 		status = nf90_get_var(ncid, vid, temp(:,:,:,:), &
-		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 		if(status /= nf90_NoErr) call handle_err(status)
 		
-		v(:,:,:,MM5totsteps-(MM5daysteps*(i+1)):(MM5totsteps-(MM5daysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
+		v(:,:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
 
 		status = nf90_get_var(ncid, wid, temp(:,:,:,:), &
-		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 		if(status /= nf90_NoErr) call handle_err(status)
 		
-		w(:,:,:,MM5totsteps-(MM5daysteps*(i+1)):(MM5totsteps-(MM5daysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
+		w(:,:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
 
 		status = nf90_get_var(ncid, tid, temp(:,:,:,:), &
-		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 		if(status /= nf90_NoErr) call handle_err(status)
 		
-		t(:,:,:,MM5totsteps-(MM5daysteps*(i+1)):(MM5totsteps-(MM5daysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
+		t(:,:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
 
 		status = nf90_get_var(ncid, ppid, temp(:,:,:,:), &
-		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 		if(status /= nf90_NoErr) call handle_err(status)
 		
-		pp(:,:,:,MM5totsteps-(MM5daysteps*(i+1)):(MM5totsteps-(MM5daysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
+		pp(:,:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
 		
 		status = nf90_get_var(ncid, pbid, temp(:,:,:,:), &
-		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 		if(status /= nf90_NoErr) call handle_err(status)
 		
-		pb(:,:,:,MM5totsteps-(MM5daysteps*(i+1)):(MM5totsteps-(MM5daysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
+		pb(:,:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
 
-		status = nf90_get_var(ncid, pblid, pbl_hgt(:,:,MM5totsteps-(MM5daysteps*(i+1)):(MM5totsteps-(MM5daysteps*i)-1)), &
-		start=(/bdy,bdy,1/),count=(/dim_j,dim_i,MM5daysteps/))
+		status = nf90_get_var(ncid, pblid, pbl_hgt(:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)), &
+		start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
 		if(status /= nf90_NoErr) call handle_err(status)
 		
-		status = nf90_get_var(psfcncid, psfcid, psfc(:,:,MM5totsteps-(MM5daysteps*(i+1)):(MM5totsteps-(MM5daysteps*i)-1)), &
-		start=(/bdy,bdy,1/),count=(/dim_j,dim_i,MM5daysteps/))
+		status = nf90_get_var(psfcncid, psfcid, psfc(:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)), &
+		start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
 		if(status /= nf90_NoErr) call handle_err(status)
 		
 		print *,'L1018, Input file of previous day loaded successfully:',i,filename_ext_atm
-		!print *,'L964, :(MM5totsteps-(MM5daysteps*i)-1)=',(MM5totsteps-(MM5daysteps*i)-1)
+		!print *,'L964, :(datatotsteps-(datadaysteps*i)-1)=',(datatotsteps-(datadaysteps*i)-1)
 		!print *,'shape(precip)=',shape(precip)
 		!print *,'shape(evap)',shape(evap)
 		!print *,'shape(q)=',shape(q)
@@ -1082,7 +1066,7 @@ if (totbtadays>1) then
 	call get_filename(new_d,new_m,new_y,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
 	call open_netcdf_files(ncid,prencid,lhncid,psfcncid,preid,lhid,uid,vid,wid,tid,qid,ppid,pbid,pblid,psfcid,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
 	
-	status = nf90_get_var(lhncid, lhid, evap(:,:,MM5totsteps), &
+	status = nf90_get_var(lhncid, lhid, evap(:,:,datatotsteps), &
 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,1/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
@@ -1090,49 +1074,49 @@ if (totbtadays>1) then
 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	q(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+	q(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
 
 	status = nf90_get_var(ncid, uid, temp(:,:,:,1), &
 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	u(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+	u(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
 
 	status = nf90_get_var(ncid, vid, temp(:,:,:,1), &
 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	v(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+	v(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
 
 	status = nf90_get_var(ncid, wid, temp(:,:,:,1), &
 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	w(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+	w(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
 
 	status = nf90_get_var(ncid, tid, temp(:,:,:,1), &
 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	t(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+	t(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
 
 	status = nf90_get_var(ncid, ppid, temp(:,:,:,1), &
 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	pp(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+	pp(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
 	
 	status = nf90_get_var(ncid, pbid, temp(:,:,:,1), &
 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	pb(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+	pb(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
 
-	status = nf90_get_var(ncid, pblid, pbl_hgt(:,:,MM5totsteps), &
+	status = nf90_get_var(ncid, pblid, pbl_hgt(:,:,datatotsteps), &
 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,1/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	status = nf90_get_var(psfcncid, psfcid, psfc(:,:,MM5totsteps), &
+	status = nf90_get_var(psfcncid, psfcid, psfc(:,:,datatotsteps), &
 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,1/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
@@ -1149,61 +1133,61 @@ else
 ! 	print *,'L1036, Input file of sim day loaded successfully:',filename_ext_atm
 ! 	! Open the first day input file ONLY
 ! 	status = nf90_get_var(prencid, preid, precip, &
-! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,MM5daysteps/))
+! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 
-! 	status = nf90_get_var(lhncid, lhid, evap(:,:,(MM5totsteps-MM5daysteps):), &
-! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,MM5daysteps/))
+! 	status = nf90_get_var(lhncid, lhid, evap(:,:,(datatotsteps-datadaysteps):), &
+! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	status = nf90_get_var(ncid, qid, temp(:,:,:,(MM5totsteps-MM5daysteps):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+! 	status = nf90_get_var(ncid, qid, temp(:,:,:,(datatotsteps-datadaysteps):), &
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
 ! 	q = temp(:,:,dim_k:1:-1,:)
 ! 
-! 	status = nf90_get_var(ncid, uid, temp(:,:,:,(MM5totsteps-MM5daysteps):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+! 	status = nf90_get_var(ncid, uid, temp(:,:,:,(datatotsteps-datadaysteps):), &
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
 ! 	u = temp(:,:,dim_k:1:-1,:)
 ! 
-! 	status = nf90_get_var(ncid, vid, temp(:,:,:,(MM5totsteps-MM5daysteps):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+! 	status = nf90_get_var(ncid, vid, temp(:,:,:,(datatotsteps-datadaysteps):), &
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
 ! 	v = temp(:,:,dim_k:1:-1,:)
 ! 
-! 	status = nf90_get_var(ncid, wid, temp(:,:,:,(MM5totsteps-MM5daysteps):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+! 	status = nf90_get_var(ncid, wid, temp(:,:,:,(datatotsteps-datadaysteps):), &
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
 ! 	w = temp(:,:,dim_k:1:-1,:)
 ! 
-! 	status = nf90_get_var(ncid, tid, temp(:,:,:,(MM5totsteps-MM5daysteps):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+! 	status = nf90_get_var(ncid, tid, temp(:,:,:,(datatotsteps-datadaysteps):), &
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
 ! 	t = temp(:,:,dim_k:1:-1,:)
 ! 
-! 	status = nf90_get_var(ncid, ppid, temp(:,:,:,(MM5totsteps-MM5daysteps):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+! 	status = nf90_get_var(ncid, ppid, temp(:,:,:,(datatotsteps-datadaysteps):), &
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
 ! 	pp = temp(:,:,dim_k:1:-1,:)
 ! 	
-! 	status = nf90_get_var(ncid, pbid, temp(:,:,:,(MM5totsteps-MM5daysteps):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+! 	status = nf90_get_var(ncid, pbid, temp(:,:,:,(datatotsteps-datadaysteps):), &
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
 ! 	pb = temp(:,:,dim_k:1:-1,:)
 ! 
-! 	status = nf90_get_var(ncid, pblid, pbl_hgt(:,:,(MM5totsteps-MM5daysteps):), &
-! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,MM5daysteps/))
+! 	status = nf90_get_var(ncid, pblid, pbl_hgt(:,:,(datatotsteps-datadaysteps):), &
+! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	status = nf90_get_var(psfcncid, psfcid, psfc(:,:,(MM5totsteps-MM5daysteps):), &
-! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,MM5daysteps/))
+! 	status = nf90_get_var(psfcncid, psfcid, psfc(:,:,(datatotsteps-datadaysteps):), &
+! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 
 ! 	! close the netcdf files
@@ -1222,58 +1206,58 @@ else
 ! 	call open_netcdf_files(ncid,prencid,lhncid,psfcncid,preid,lhid,uid,vid,wid,tid,qid,ppid,pbid,pblid,psfcid,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
 ! 	print *,'L1110, sim day - 1:',filename_ext_atm
 ! 	
-! 	status = nf90_get_var(lhncid, lhid, evap(:,:,(MM5totsteps-(MM5daysteps*2)):), &
-! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,MM5daysteps/))
+! 	status = nf90_get_var(lhncid, lhid, evap(:,:,(datatotsteps-(datadaysteps*2)):), &
+! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	status = nf90_get_var(ncid, qid, temp(:,:,:,(MM5totsteps-(MM5daysteps*2)):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+! 	status = nf90_get_var(ncid, qid, temp(:,:,:,(datatotsteps-(datadaysteps*2)):), &
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	q(:,:,:,(MM5totsteps-(MM5daysteps*2)):) = temp(:,:,dim_k:1:-1,(MM5totsteps-(MM5daysteps*2)):)
+! 	q(:,:,:,(datatotsteps-(datadaysteps*2)):) = temp(:,:,dim_k:1:-1,(datatotsteps-(datadaysteps*2)):)
 ! 
-! 	status = nf90_get_var(ncid, uid, temp(:,:,:,(MM5totsteps-(MM5daysteps*2)):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+! 	status = nf90_get_var(ncid, uid, temp(:,:,:,(datatotsteps-(datadaysteps*2)):), &
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	u(:,:,:,(MM5totsteps-(MM5daysteps*2)):) = temp(:,:,dim_k:1:-1,(MM5totsteps-(MM5daysteps*2)):)
+! 	u(:,:,:,(datatotsteps-(datadaysteps*2)):) = temp(:,:,dim_k:1:-1,(datatotsteps-(datadaysteps*2)):)
 ! 
-! 	status = nf90_get_var(ncid, vid, temp(:,:,:,(MM5totsteps-(MM5daysteps*2)):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+! 	status = nf90_get_var(ncid, vid, temp(:,:,:,(datatotsteps-(datadaysteps*2)):), &
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	v(:,:,:,(MM5totsteps-(MM5daysteps*2)):) = temp(:,:,dim_k:1:-1,(MM5totsteps-(MM5daysteps*2)):)
+! 	v(:,:,:,(datatotsteps-(datadaysteps*2)):) = temp(:,:,dim_k:1:-1,(datatotsteps-(datadaysteps*2)):)
 ! 
-! 	status = nf90_get_var(ncid, wid, temp(:,:,:,(MM5totsteps-(MM5daysteps*2)):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+! 	status = nf90_get_var(ncid, wid, temp(:,:,:,(datatotsteps-(datadaysteps*2)):), &
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	w(:,:,:,(MM5totsteps-(MM5daysteps*2)):) = temp(:,:,dim_k:1:-1,(MM5totsteps-(MM5daysteps*2)):)
+! 	w(:,:,:,(datatotsteps-(datadaysteps*2)):) = temp(:,:,dim_k:1:-1,(datatotsteps-(datadaysteps*2)):)
 ! 
-! 	status = nf90_get_var(ncid, tid, temp(:,:,:,(MM5totsteps-(MM5daysteps*2)):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+! 	status = nf90_get_var(ncid, tid, temp(:,:,:,(datatotsteps-(datadaysteps*2)):), &
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	t(:,:,:,(MM5totsteps-(MM5daysteps*2)):) = temp(:,:,dim_k:1:-1,(MM5totsteps-(MM5daysteps*2)):)
+! 	t(:,:,:,(datatotsteps-(datadaysteps*2)):) = temp(:,:,dim_k:1:-1,(datatotsteps-(datadaysteps*2)):)
 ! 
-! 	status = nf90_get_var(ncid, ppid, temp(:,:,:,(MM5totsteps-(MM5daysteps*2)):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+! 	status = nf90_get_var(ncid, ppid, temp(:,:,:,(datatotsteps-(datadaysteps*2)):), &
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	pp(:,:,:,(MM5totsteps-(MM5daysteps*2)):) = temp(:,:,dim_k:1:-1,(MM5totsteps-(MM5daysteps*2)):)
+! 	pp(:,:,:,(datatotsteps-(datadaysteps*2)):) = temp(:,:,dim_k:1:-1,(datatotsteps-(datadaysteps*2)):)
 ! 	
-! 	status = nf90_get_var(ncid, pbid, temp(:,:,:,(MM5totsteps-(MM5daysteps*2)):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+! 	status = nf90_get_var(ncid, pbid, temp(:,:,:,(datatotsteps-(datadaysteps*2)):), &
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	pb(:,:,:,(MM5totsteps-(MM5daysteps*2)):) = temp(:,:,dim_k:1:-1,(MM5totsteps-(MM5daysteps*2)):)
+! 	pb(:,:,:,(datatotsteps-(datadaysteps*2)):) = temp(:,:,dim_k:1:-1,(datatotsteps-(datadaysteps*2)):)
 ! 
-! 	status = nf90_get_var(ncid, pblid, pbl_hgt(:,:,(MM5totsteps-(MM5daysteps*2)):), &
-! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,MM5daysteps/))
+! 	status = nf90_get_var(ncid, pblid, pbl_hgt(:,:,(datatotsteps-(datadaysteps*2)):), &
+! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	status = nf90_get_var(psfcncid, psfcid, psfc(:,:,(MM5totsteps-(MM5daysteps*2)):), &
-! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,MM5daysteps/))
+! 	status = nf90_get_var(psfcncid, psfcid, psfc(:,:,(datatotsteps-(datadaysteps*2)):), &
+! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
 ! 	! close the netcdf files
@@ -1289,7 +1273,7 @@ else
 ! 	call open_netcdf_files(ncid,prencid,lhncid,psfcncid,preid,lhid,uid,vid,wid,tid,qid,ppid,pbid,pblid,psfcid,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
 ! 	print *,'L1177, sim day + 1:',filename_ext_atm
 ! 	
-! 	status = nf90_get_var(lhncid, lhid, evap(:,:,MM5totsteps), &
+! 	status = nf90_get_var(lhncid, lhid, evap(:,:,datatotsteps), &
 ! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,1/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
@@ -1297,49 +1281,49 @@ else
 ! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	q(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+! 	q(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
 ! 
 ! 	status = nf90_get_var(ncid, uid, temp(:,:,:,1), &
 ! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	u(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+! 	u(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
 ! 
 ! 	status = nf90_get_var(ncid, vid, temp(:,:,:,1), &
 ! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	v(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+! 	v(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
 ! 
 ! 	status = nf90_get_var(ncid, wid, temp(:,:,:,1), &
 ! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	w(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+! 	w(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
 ! 
 ! 	status = nf90_get_var(ncid, tid, temp(:,:,:,1), &
 ! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	t(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+! 	t(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
 ! 
 ! 	status = nf90_get_var(ncid, ppid, temp(:,:,:,1), &
 ! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	pp(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+! 	pp(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
 ! 	
 ! 	status = nf90_get_var(ncid, pbid, temp(:,:,:,1), &
 ! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	pb(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+! 	pb(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
 ! 
-! 	status = nf90_get_var(ncid, pblid, pbl_hgt(:,:,MM5totsteps), &
+! 	status = nf90_get_var(ncid, pblid, pbl_hgt(:,:,datatotsteps), &
 ! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,1/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	status = nf90_get_var(psfcncid, psfcid, psfc(:,:,MM5totsteps), &
+! 	status = nf90_get_var(psfcncid, psfcid, psfc(:,:,datatotsteps), &
 ! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,1/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
@@ -1359,7 +1343,7 @@ end if
   
 
 !evap converted to mm > Unit conversion checked and OK 18/7/17 :)
-evap = evap*(1440/MM5daysteps)*60/Lv
+evap = evap*(1440/datadaysteps)*60/Lv
   
 qt = qt + q ! i.e. QVAPOUR + SUM(QCLD,QRAIN,QSNOW,QICE)
 !qt = q
@@ -1446,7 +1430,7 @@ REAL, DIMENSION(:,:,:,:) :: qc,qt
 CHARACTER(LEN=100) :: filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P
 
 REAL, DIMENSION(SIZE(qt,1),SIZE(qt,2),SIZE(qt,3),SIZE(qt,4)) :: clw,rnw,snow,ice
-REAL, DIMENSION(SIZE(qt,1),SIZE(qt,2),SIZE(qt,3),MM5daysteps) :: temp
+REAL, DIMENSION(SIZE(qt,1),SIZE(qt,2),SIZE(qt,3),datadaysteps) :: temp
 
 INTEGER :: ncid !clwncid,rnwncid,snowncid,icencid
 INTEGER :: clwid,rnwid,snowid,iceid
@@ -1474,35 +1458,35 @@ end if
 !!! LAST BACK-TRACKED DAY SHOULD BE AT THE START OF THE ARRAY.
 !!! THE LAST TIME POSITION IN THE ARRAY SHOULD BE THE FIRST TIMESTEP OF SIM DAY + 1.
 
-! Since our input files only consist of one day, open all timesteps (MM5daysteps) in file (i.e. remove sind2, make it 1)
+! Since our input files only consist of one day, open all timesteps (datadaysteps) in file (i.e. remove sind2, make it 1)
 
 ! We want the event day + totbtadays before it
 
 if (totbtadays>1) then
 	! Open the first day input file
 	status = nf90_get_var(ncid, clwid, temp(:,:,:,:), &
-	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))    
+	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))    
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	clw(:,:,:,(MM5totsteps-MM5daysteps):(MM5totsteps-1)) = temp(:,:,dim_k:1:-1,:)
+	clw(:,:,:,(datatotsteps-datadaysteps):(datatotsteps-1)) = temp(:,:,dim_k:1:-1,:)
 
 	status = nf90_get_var(ncid, rnwid, temp(:,:,:,:), &
-	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	rnw(:,:,:,(MM5totsteps-MM5daysteps):(MM5totsteps-1)) = temp(:,:,dim_k:1:-1,:)
+	rnw(:,:,:,(datatotsteps-datadaysteps):(datatotsteps-1)) = temp(:,:,dim_k:1:-1,:)
 
 	status = nf90_get_var(ncid, snowid, temp(:,:,:,:), &
-	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	snow(:,:,:,(MM5totsteps-MM5daysteps):(MM5totsteps-1)) = temp(:,:,dim_k:1:-1,:)
+	snow(:,:,:,(datatotsteps-datadaysteps):(datatotsteps-1)) = temp(:,:,dim_k:1:-1,:)
 
 	status = nf90_get_var(ncid, iceid, temp(:,:,:,:), &
-	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	ice(:,:,:,(MM5totsteps-MM5daysteps):(MM5totsteps-1)) = temp(:,:,dim_k:1:-1,:)
+	ice(:,:,:,(datatotsteps-datadaysteps):(datatotsteps-1)) = temp(:,:,dim_k:1:-1,:)
 	
 	! close the netcdf file
 	status = nf90_close(ncid)
@@ -1519,28 +1503,28 @@ if (totbtadays>1) then
 		call open_mixtot_netcdf_files(ncid,clwid,rnwid,snowid,iceid,filename_ext_atm)
 
 		status = nf90_get_var(ncid, clwid, temp(:,:,:,:), &
-		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))    
+		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))    
 		if(status /= nf90_NoErr) call handle_err(status)
 		
-		clw(:,:,:,:(MM5totsteps-(MM5daysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
+		clw(:,:,:,:(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
 
 		status = nf90_get_var(ncid, rnwid, temp(:,:,:,:), &
-		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 		if(status /= nf90_NoErr) call handle_err(status)
 		
-		rnw(:,:,:,:(MM5totsteps-(MM5daysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
+		rnw(:,:,:,:(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
 
 		status = nf90_get_var(ncid, snowid, temp(:,:,:,:), &
-		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 		if(status /= nf90_NoErr) call handle_err(status)
 		
-		snow(:,:,:,:(MM5totsteps-(MM5daysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
+		snow(:,:,:,:(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
 
 		status = nf90_get_var(ncid, iceid, temp(:,:,:,:), &
-		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 		if(status /= nf90_NoErr) call handle_err(status)
 		
-		ice(:,:,:,:(MM5totsteps-(MM5daysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
+		ice(:,:,:,:(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
 		
 		! close the netcdf file
 		status = nf90_close(ncid)
@@ -1556,25 +1540,25 @@ if (totbtadays>1) then
 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))    
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	clw(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+	clw(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
 
 	status = nf90_get_var(ncid, rnwid, temp(:,:,:,1), &
 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	rnw(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+	rnw(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
 
 	status = nf90_get_var(ncid, snowid, temp(:,:,:,1), &
 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	snow(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+	snow(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
 
 	status = nf90_get_var(ncid, iceid, temp(:,:,:,1), &
 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	
-	ice(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+	ice(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
 	
 	! close the netcdf file
 	status = nf90_close(ncid)
@@ -1585,25 +1569,25 @@ else
 	print*, 'If you only want to back-track for one day, must change how input data is retrieved.'
 ! 	! Open the first day input file ONLY
 ! 	status = nf90_get_var(ncid, clwid, temp(:,:,:,:), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))    
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))    
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
 ! 	clw = temp(:,:,dim_k:1:-1,:)
 ! 
 ! 	status = nf90_get_var(ncid, rnwid, temp(:,:,:,:), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
 ! 	rnw = temp(:,:,dim_k:1:-1,:)
 ! 
 ! 	status = nf90_get_var(ncid, snowid, temp(:,:,:,:), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
 ! 	snow = temp(:,:,dim_k:1:-1,:)
 ! 
 ! 	status = nf90_get_var(ncid, iceid, temp(:,:,:,:), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,MM5daysteps/))
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
 ! 	ice = temp(:,:,dim_k:1:-1,:)
@@ -1625,25 +1609,25 @@ else
 ! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))    
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	clw(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+! 	clw(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
 ! 
 ! 	status = nf90_get_var(ncid, rnwid, temp(:,:,:,1), &
 ! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	rnw(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+! 	rnw(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
 ! 
 ! 	status = nf90_get_var(ncid, snowid, temp(:,:,:,1), &
 ! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	snow(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+! 	snow(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
 ! 
 ! 	status = nf90_get_var(ncid, iceid, temp(:,:,:,1), &
 ! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
 ! 	if(status /= nf90_NoErr) call handle_err(status)
 ! 	
-! 	ice(:,:,:,MM5totsteps) = temp(:,:,dim_k:1:-1,1)
+! 	ice(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
 ! 	
 ! 	! close the netcdf file
 ! 	status = nf90_close(ncid)
@@ -1727,7 +1711,7 @@ REAL, DIMENSION(:), INTENT(IN) :: precip
 INTEGER, DIMENSION(:), INTENT(OUT) :: par_release
 INTEGER, INTENT(IN) :: npar
 
-REAL, DIMENSION(SIZE(precip)*inMM5tsteps) :: cumm_precip
+REAL, DIMENSION(SIZE(precip)*indatatsteps) :: cumm_precip
 REAL, DIMENSION(npar) :: rand_nums
 INTEGER :: tt,rr,ss,rec
 
@@ -1741,12 +1725,12 @@ cumm_precip = 0.
 rec = 0
 
 do tt = 1,SIZE(precip)
-  do ss = 1,inMM5tsteps
+  do ss = 1,indatatsteps
     rec = rec + 1
     if (rec==1) then
-      cumm_precip(1) = precip(1)/inMM5tsteps
+      cumm_precip(1) = precip(1)/indatatsteps
     else
-      cumm_precip(rec) = cumm_precip(rec-1) + precip(tt)/inMM5tsteps
+      cumm_precip(rec) = cumm_precip(rec-1) + precip(tt)/indatatsteps
     end if
   end do
 end do
@@ -1819,9 +1803,9 @@ REAL, INTENT(INOUT), DIMENSION(:,:,:,:) :: var
 INTEGER :: i
 
 
-do i = 1,inMM5tsteps-1
-  var(:,:,:,i+1::inMM5tsteps) = (1-(i*1./inMM5tsteps))*var(:,:,:,1:MM5daysteps+1-inMM5tsteps:inMM5tsteps) &
-                 & + (i*1./inMM5tsteps)*var(:,:,:,1+inMM5tsteps::inMM5tsteps)
+do i = 1,indatatsteps-1
+  var(:,:,:,i+1::indatatsteps) = (1-(i*1./indatatsteps))*var(:,:,:,1:datadaysteps+1-indatatsteps:indatatsteps) &
+                 & + (i*1./indatatsteps)*var(:,:,:,1+indatatsteps::indatatsteps)
 end do
 
 END SUBROUTINE lin_interp_inMM5tsteps
@@ -1865,7 +1849,7 @@ dp(:,:,dim_k,:) = surf_pres(:,:,:) - SUM(pres(:,:,dim_k-1:,:),3)/2.
 
  
 !mass in mm
-pw(:,:,:,::inMM5tsteps) = dp*mix/g
+pw(:,:,:,::indatatsteps) = dp*mix/g
 
 
 !interpolate inside MM5 time steps
@@ -1895,7 +1879,7 @@ REAL, INTENT(IN), DIMENSION(:,:,:,:) :: mix,pres
 REAL, INTENT(IN), DIMENSION(:,:,:) :: surf_pres
 REAL, INTENT(OUT), DIMENSION(:,:,:) :: tpw
 
-REAL, DIMENSION(dim_j,dim_i,dim_k,MM5totsteps) :: dp
+REAL, DIMENSION(dim_j,dim_i,dim_k,datatotsteps) :: dp
 INTEGER :: j,i,k,t
 
 REAL, INTENT(IN) :: ptop
@@ -1919,7 +1903,7 @@ dp(:,:,dim_k,:) = surf_pres(:,:,:) - SUM(pres(:,:,dim_k-1:,:),3)/2.
 !mass in mmtpw
 do j = 1,dim_j
   do i = 1,dim_i
-    do t = 1,MM5totsteps
+    do t = 1,datatotsteps
       tpw(j,i,t) = SUM(dp(j,i,:,t)*mix(j,i,:,t)/g)
     end do
   end do
@@ -1949,7 +1933,7 @@ REAL, INTENT(IN), DIMENSION(:,:,:) :: surf_pres
 INTEGER, INTENT(IN), DIMENSION(:,:,:) :: pbl_lev
 REAL, INTENT(OUT), DIMENSION(:,:,:) :: tpw
 
-REAL, DIMENSION(dim_j,dim_i,dim_k,MM5totsteps) :: dp
+REAL, DIMENSION(dim_j,dim_i,dim_k,datatotsteps) :: dp
 INTEGER :: j,i,k,t
 
 
@@ -1972,7 +1956,7 @@ dp(:,:,dim_k,:) = surf_pres(:,:,:) - SUM(pres(:,:,dim_k-1:,:),3)/2.
 !mass in mm
 do j = 1,dim_j
   do i = 1,dim_i
-    do t = 1,MM5totsteps
+    do t = 1,datatotsteps
       tpw(j,i,t) = SUM(dp(j,i,pbl_lev(j,i,t):,t)*mix(j,i,pbl_lev(j,i,t):,t)/g)
     end do
   end do
@@ -2023,7 +2007,7 @@ REAL, INTENT(IN), DIMENSION(:,:,:,:) :: mix,mixtot,temp,pres
 REAL, INTENT(OUT), DIMENSION(:,:,:,:) :: eq_pot_temp
 
 
-REAL, DIMENSION(dim_j,dim_i,dim_k,MM5totsteps) :: es,mix_s,pot_temp
+REAL, DIMENSION(dim_j,dim_i,dim_k,datatotsteps) :: es,mix_s,pot_temp
 
 
 !
@@ -2075,7 +2059,7 @@ REAL, INTENT(IN), DIMENSION(:,:,:) ::pbl_hgt,surf_pres
 INTEGER, INTENT(OUT), DIMENSION(:,:,:) :: pbl_lev
 
 
-REAL, DIMENSION(dim_j,dim_i,MM5totsteps) :: pbl_pres
+REAL, DIMENSION(dim_j,dim_i,datatotsteps) :: pbl_pres
 INTEGER :: j,i,t
 INTEGER,DIMENSION(1) :: dummy_min
 
@@ -2094,7 +2078,7 @@ pbl_pres = -1*pbl_hgt*g + surf_pres
 !
 do j = 1,dim_j
   do i = 1,dim_i
-    do t = 1,MM5totsteps
+    do t = 1,datatotsteps
       dummy_min = MINLOC(abs(pbl_pres(j,i,t) - pres(j,i,:,t)))
       if ((pbl_pres(j,i,t) - pres(j,i,dummy_min(1),t)) < 0.) then
         pbl_lev(j,i,t) = dummy_min(1) - 2 
@@ -2734,7 +2718,7 @@ CHARACTER(LEN=10):: fname_smon, fname_sday
 !
 INTEGER :: par_lev
 REAL :: ptop,delx,par_lat,par_lon,par_pres,par_q,new_par_q,end_precip 
-INTEGER :: MM5tstep
+INTEGER :: datatstep
 REAL,ALLOCATABLE,DIMENSION(:,:) :: lat2d,lon2d
 REAL,ALLOCATABLE,DIMENSION(:,:) :: terrain,WV_cont,WV_cont_day !pstar, > make 3d
 REAL,ALLOCATABLE,DIMENSION(:,:) :: WV_cont_apbl,WV_cont_day_apbl
@@ -2748,7 +2732,7 @@ REAL,ALLOCATABLE,DIMENSION(:,:,:) :: pres_then,tempnow
 INTEGER,ALLOCATABLE,DIMENSION(:,:,:) :: pbl_lev
 
 INTEGER,ALLOCATABLE,DIMENSION(:) :: par_release
-INTEGER :: xx,yy,tt,nn,mm,npar,orec,x,y,i,ttMM5,nnMM5,ttMM5day
+INTEGER :: xx,yy,tt,nn,mm,npar,orec,x,y,i,ttdata,nnMM5,ttdataday
 INTEGER :: xx_omp,threadnum,torec
 REAL :: ttfac,nnfac,precip_here,qfac
 
@@ -2838,8 +2822,8 @@ status = nf90_get_var(headncid, ptopid, ptop)
 if(status /= nf90_NoErr) call handle_err(status)
 status = nf90_get_att(headncid, NF90_GLOBAL, "DX",delx)
 if(status /= nf90_NoErr) call handle_err(status)
-status = nf90_inquire_dimension(headncid, tstepid,len = MM5tstep) 
-MM5tstep=1440/MM5tstep ! Value must be 1440/8=180, where 8 is number of timesteps in the file (it was set up this way based on MM5 input files, where MM5 model timestep was 180mins)
+status = nf90_inquire_dimension(headncid, tstepid,len = datatstep) 
+datatstep=1440/datatstep ! Value must be 1440/8=180, where 8 is number of timesteps in the file (it was set up this way based on MM5 input files, where MM5 model timestep was 180mins)
 if(status /= nf90_NoErr) call handle_err(status)
 status = nf90_get_att(headncid, NF90_GLOBAL, "SOUTH-NORTH_GRID_DIMENSION", fdim_i) 
 if(status /= nf90_NoErr) call handle_err(status)
@@ -2866,7 +2850,7 @@ dim_j = fdim_j - 2*(bdy-1)
 totpts = (dim_j-2)*(dim_i-2)
 
 ! Allocate the required arrays
-ALLOCATE( terrain(dim_j,dim_i),lon2d(dim_j,dim_i),lat2d(dim_j,dim_i), STAT = status) !sigma(dim_k),pstar(dim_j,dim_i,MM5daysteps), &
+ALLOCATE( terrain(dim_j,dim_i),lon2d(dim_j,dim_i),lat2d(dim_j,dim_i), STAT = status) !sigma(dim_k),pstar(dim_j,dim_i,datadaysteps), &
  
 !
 ! Read in more variables
@@ -2887,23 +2871,23 @@ status = nf90_close(headncid)
 ! Calculate the number of trajectory time steps in a day and in input file time step
 !
 daytsteps = 1440/tstep                ! number of sub-daily simulation time steps
-inMM5tsteps = MM5tstep/tstep          ! divide input file time step by the number of simulation time steps, as they may differ
+indatatsteps = datatstep/tstep          ! divide input file time step by the number of simulation time steps, as they may differ
 totsteps = daytsteps*(totbtadays+1)   ! total number of simulation data time steps to remember
 
-MM5daysteps = 1440/MM5tstep           ! number of input file time steps in day
-MM5totsteps = (MM5daysteps*(totbtadays+1)) + 1 ! total number of input file time steps over the back-track period
+datadaysteps = 1440/datatstep           ! number of input file time steps in day
+datatotsteps = (datadaysteps*(totbtadays+1)) + 1 ! total number of input file time steps over the back-track period
 
 ! Allocate the variable arrays
-ALLOCATE( precip(dim_j,dim_i,MM5daysteps), &
-  evap(dim_j,dim_i,MM5totsteps),u(dim_j,dim_i,dim_k,MM5totsteps), &
-  v(dim_j,dim_i,dim_k,MM5totsteps),temp(dim_j,dim_i,dim_k,MM5totsteps), &
-  mix(dim_j,dim_i,dim_k,MM5totsteps),pp(dim_j,dim_i,dim_k,MM5totsteps),pb(dim_j,dim_i,dim_k,MM5totsteps), &
-  !pot_temp(dim_j,dim_i,dim_k,MM5totsteps), &
-  mixtot(dim_j,dim_i,dim_k,MM5totsteps), &
-  tpw(dim_j,dim_i,MM5totsteps),pw(dim_j,dim_i,dim_k,daytsteps+1), &
-  mixcld(dim_j,dim_i,dim_k,MM5totsteps),pres(dim_j,dim_i,dim_k,MM5totsteps), &
-  psfc(dim_j,dim_i,MM5totsteps),surf_pres(dim_j,dim_i,MM5totsteps), w(dim_j,dim_i,dim_k,MM5totsteps), &
-  pbl_hgt(dim_j,dim_i,MM5totsteps),pbl_lev(dim_j,dim_i,MM5totsteps), STAT = status )
+ALLOCATE( precip(dim_j,dim_i,datadaysteps), &
+  evap(dim_j,dim_i,datatotsteps),u(dim_j,dim_i,dim_k,datatotsteps), &
+  v(dim_j,dim_i,dim_k,datatotsteps),temp(dim_j,dim_i,dim_k,datatotsteps), &
+  mix(dim_j,dim_i,dim_k,datatotsteps),pp(dim_j,dim_i,dim_k,datatotsteps),pb(dim_j,dim_i,dim_k,datatotsteps), &
+  !pot_temp(dim_j,dim_i,dim_k,datatotsteps), &
+  mixtot(dim_j,dim_i,dim_k,datatotsteps), &
+  tpw(dim_j,dim_i,datatotsteps),pw(dim_j,dim_i,dim_k,daytsteps+1), &
+  mixcld(dim_j,dim_i,dim_k,datatotsteps),pres(dim_j,dim_i,dim_k,datatotsteps), &
+  psfc(dim_j,dim_i,datatotsteps),surf_pres(dim_j,dim_i,datatotsteps), w(dim_j,dim_i,dim_k,datatotsteps), &
+  pbl_hgt(dim_j,dim_i,datatotsteps),pbl_lev(dim_j,dim_i,datatotsteps), STAT = status )
 
   
 !
@@ -2972,7 +2956,7 @@ do dd = 1, totdays
 
   ! Calculate the precipitable water accumulated from the ground up on day of interest (lat,lon,height,time). 
   ! This is used to determine the parcel initial height.
-  call calc_pw(mixcld(:,:,:,MM5totsteps-MM5daysteps:),pres(:,:,:,MM5totsteps-MM5daysteps:),surf_pres(:,:,MM5totsteps-MM5daysteps:),ptop,pw)
+  call calc_pw(mixcld(:,:,:,datatotsteps-datadaysteps:),pres(:,:,:,datatotsteps-datadaysteps:),surf_pres(:,:,datatotsteps-datadaysteps:),ptop,pw)
 
   ! Calculate the total precipitable water (lat,lon,time).
   call calc_tpw(mixtot,pres,surf_pres,ptop,tpw)  
@@ -2995,7 +2979,7 @@ do dd = 1, totdays
   !seem to work otherwise!!!????
   
   print *, 'L3011, Starting parallelisation'
-  !$OMP PARALLEL DEFAULT(PRIVATE) COPYIN(daytsteps,totsteps,inMM5tsteps,MM5daysteps,MM5totsteps,dim_i,dim_j,dim_k,sday,smon,syear,mon,year,day,dd,totpts,ssdim) SHARED(pw,tpw,u,v,w,pres,temp,surf_pres,evap,precip,mix,mixtot,pbl_lev,lat2d,lon2d,orec,outncid,wvcid,wvc2id,xlocid,ylocid,dayid,opreid,wsmask)
+  !$OMP PARALLEL DEFAULT(PRIVATE) COPYIN(daytsteps,totsteps,indatatsteps,datadaysteps,datatotsteps,dim_i,dim_j,dim_k,sday,smon,syear,mon,year,day,dd,totpts,ssdim) SHARED(pw,tpw,u,v,w,pres,temp,surf_pres,evap,precip,mix,mixtot,pbl_lev,lat2d,lon2d,orec,outncid,wvcid,wvc2id,xlocid,ylocid,dayid,opreid,wsmask)
   !,daylist)  
   
   !!!!$OMP SHARED(pw,tpw,pot_temp,u,v,w,pres,temp,surf_pres,evap,precip,mix,mixtot,pbl_lev,lat2d,lon2d,orec,outncid,wvcid,wvc2id,xlocid,ylocid,dayid,opreid,wsmask)
@@ -3071,8 +3055,8 @@ do dd = 1, totdays
 	par_release = 0
 	
 	!$OMP CRITICAL (par_rel_time)
-	if (COUNT(MASK = precip(xx,yy,:)>0.)<(nparcels/inMM5tsteps)) then
-	  npar = COUNT(MASK = precip(xx,yy,:)>0.) * inMM5tsteps
+	if (COUNT(MASK = precip(xx,yy,:)>0.)<(nparcels/indatatsteps)) then
+	  npar = COUNT(MASK = precip(xx,yy,:)>0.) * indatatsteps
 	  call parcel_release_time(precip(xx,yy,:),npar,par_release)
 	else
 	  npar = nparcels
@@ -3112,24 +3096,24 @@ do dd = 1, totdays
 	    !
 	    !the MM5 time step before this parcel time step on the rain day
 	    !
-	    ttMM5day = INT((tt-1)/inMM5tsteps) + 1
-	    !print *,'L3019, mm,ttMM5day=',mm,ttMM5day
+	    ttdataday = INT((tt-1)/indatatsteps) + 1
+	    !print *,'L3019, mm,ttdataday=',mm,ttdataday
 	    
 	    !
 	    !the MM5 time step from the beginning of the loaded files
 	    !
-	    ttMM5 = MM5totsteps - MM5daysteps - 1 + ttMM5day
-	    !print *,'L3025, mm,ttMM5=',mm,ttMM5
+	    ttdata = datatotsteps - datadaysteps - 1 + ttdataday
+	    !print *,'L3025, mm,ttdata=',mm,ttdata
 	  
 	    !
 	    !factor for linear interpolation to parcel time step
 	    !
-	    ttfac = MOD(tt,inMM5tsteps)*1./inMM5tsteps
+	    ttfac = MOD(tt,indatatsteps)*1./indatatsteps
 	  
 	    !
 	    !the precip produced here at this parcel time step
 	    !
-	    end_precip = precip(xx,yy,ttMM5day)/inMM5tsteps
+	    end_precip = precip(xx,yy,ttdataday)/indatatsteps
 	    
 	    !
 	    !determine sigma level from which to release parcel
@@ -3161,22 +3145,22 @@ do dd = 1, totdays
   
 	    !$OMP CRITICAL (par_q1)
 	    !calculate the parcel mixing ratio
-	    par_q = lin_interp(mixtot(xx,yy,par_lev,ttMM5:ttMM5+1),ttfac) 
+	    par_q = lin_interp(mixtot(xx,yy,par_lev,ttdata:ttdata+1),ttfac) 
 	    !$OMP END CRITICAL (par_q1)
 	    
 	   
 	    !$OMP CRITICAL (pot_temp1)
-	    !par_pot_temp = lin_interp(pot_temp(xx,yy,par_lev,ttMM5:ttMM5+1),ttfac)
+	    !par_pot_temp = lin_interp(pot_temp(xx,yy,par_lev,ttdata:ttdata+1),ttfac)
 	    !$OMP END CRITICAL (pot_temp1)
 	    
 	    
 	    !$OMP CRITICAL (par_pres1)
-	    par_pres = lin_interp(pres(xx,yy,par_lev,ttMM5:ttMM5+1),ttfac)
+	    par_pres = lin_interp(pres(xx,yy,par_lev,ttdata:ttdata+1),ttfac)
 	    !$OMP END CRITICAL (par_pres1)
 	    
 	    
 	     if (print_test) then
-	     !print *,"par_q1",xx,yy,par_lev,par_q,ttMM5,ttfac,par_pot_temp,par_pres,threadnum
+	     !print *,"par_q1",xx,yy,par_lev,par_q,ttdata,ttfac,par_pot_temp,par_pres,threadnum
 	     end if
 	  
 	     
@@ -3199,9 +3183,9 @@ do dd = 1, totdays
 			parcel_stats(3,totsteps-daytsteps+tt+1-nn) = par_lat
 			parcel_stats(4,totsteps-daytsteps+tt+1-nn) = par_pres
 			parcel_stats(5,totsteps-daytsteps+tt+1-nn) = par_q
-			parcel_stats(6,totsteps-daytsteps+tt+1-nn) = u(x,y,par_lev,ttMM5)
-			parcel_stats(7,totsteps-daytsteps+tt+1-nn) = v(x,y,par_lev,ttMM5)
-			parcel_stats(8,totsteps-daytsteps+tt+1-nn) = w(x,y,par_lev,ttMM5)
+			parcel_stats(6,totsteps-daytsteps+tt+1-nn) = u(x,y,par_lev,ttdata)
+			parcel_stats(7,totsteps-daytsteps+tt+1-nn) = v(x,y,par_lev,ttdata)
+			parcel_stats(8,totsteps-daytsteps+tt+1-nn) = w(x,y,par_lev,ttdata)
 		end if
 	    
 	      !
@@ -3221,8 +3205,8 @@ do dd = 1, totdays
 	   
 	      
 	      ! Find where you are in the simlength timeseries
-	      nnMM5 = INT(nn/inMM5tsteps) + 1
-	      nnfac = MOD(nn,inMM5tsteps)*1./inMM5tsteps  
+	      nnMM5 = INT(nn/indatatsteps) + 1
+	      nnfac = MOD(nn,indatatsteps)*1./indatatsteps  
 	      !print *,'L3186,nn,nnfac=',nn,nnfac
 	      
 	      
@@ -3253,8 +3237,8 @@ do dd = 1, totdays
 		!end if
 
 		  ! Find where you are in the nn timeseries
-	      nnMM5 = INT((nn-1)/inMM5tsteps) + 1
-	      nnfac = MOD(nn-1,inMM5tsteps)*1./inMM5tsteps
+	      nnMM5 = INT((nn-1)/indatatsteps) + 1
+	      nnfac = MOD(nn-1,indatatsteps)*1./indatatsteps
 	      !print *,'L3217,nn,nnfac=',nn,nnfac
 	      
 
@@ -3348,7 +3332,7 @@ do dd = 1, totdays
 		!print *,'L3249, evap=',lin_interp(evap(x,y,nnMM5:nnMM5+1),nnfac
 		!print *,'L3250, wv_cont 1=',WV_cont(x,y)
 			WV_cont(x,y) = WV_cont(x,y) + (lin_interp(evap(x,y,nnMM5:nnMM5+1),nnfac) &
-					/ (inMM5tsteps*lin_interp(tpw(x,y,nnMM5:nnMM5+1),nnfac)))
+					/ (indatatsteps*lin_interp(tpw(x,y,nnMM5:nnMM5+1),nnfac)))
 		!print *,'L3383, wv_cont=',WV_cont(x,y),'evap_interp=',(lin_interp(evap(x,y,nnMM5:nnMM5+1),nnfac)),'tpw_interp=',(lin_interp(tpw(x,y,nnMM5:nnMM5+1),nnfac))
 		
 		end if
@@ -3373,7 +3357,7 @@ do dd = 1, totdays
 	      !saving parcel stats
 	      if (eachParcel) then
 	        !print *,"here"
-	        parcel_stats(9,totsteps-daytsteps+tt+1-nn) = evap(x,y,ttMM5)
+	        parcel_stats(9,totsteps-daytsteps+tt+1-nn) = evap(x,y,ttdata)
 		parcel_stats(10,totsteps-daytsteps+tt+1-nn) = WV_cont(x,y)
               end if
 	      
