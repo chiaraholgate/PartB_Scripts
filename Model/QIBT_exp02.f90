@@ -1,3 +1,37 @@
+!%%%%%%% PURPOSE %%%%%%%
+! This program calculates the quasi-isentropic back trajectories of
+! water vapor using a method based on Dirmeyer & Brubaker, 1999,
+! "Contrasting evaporative moisture sources during the drought of
+! 1988 and the flood of 1993", Journal of Geophysical Research, 104 D16
+! pg 19,383-19,397.
+!
+!%%%%%%% INPUT DATA %%%%%%%
+! Input data are taken from NARCliM output (precip,evap (2D), temp,wind,
+! mixing ratios (3D)). 
+! Data here:
+! /srv/ccrc/data33/z3481416/CCRC-WRF3.6.0.5-SEB/ERA-Interim/R2_nudging/out/
+! And copied to here:
+! 
+! The model outputs a daily 2d grid of water vapour contribution of each 
+! grid cell to the precipitation in each cell where it rained. It also
+! outputs the total rainfall depth in each cell where it rained, and the 
+! coordinates of each rain grid cell.
+! 
+! The output file is dimensioned (rec,lat,lon) where rec is the number of 
+! grid cells where it rained that day, lat & lon are the sizes of the domain in 
+! the lat and lon directions. Attributes include location and time and 
+! amount of precip in the pixel of interest (y,x,day,month,year,precip) 
+! each of which is a 1D array of length rec.
+!
+! Here I have amended the program to read in a list times (in days since
+! start of simulation) and calculate the back trajectories for the day
+! centered around the given time
+!
+! Here I have changed it so that parcels follow equivalent potential
+! temperature surfaces within the PBL and is advected usign w above that
+!-------------------------------------------------------------------
+
+
 ! These routines are used to perform a quasi-isentropic back trajectory
 ! analysis of water vapor sources based on output from an MM5 run.
 !
@@ -7,7 +41,7 @@
 ! NOTE: INPUT DATA VERTICAL LEVELS ARE THE REVERSE OF WHAT IS EXPECTED BY THE FUNCTIONS.
 ! MODEL EXPECTS VERTICAL LEVELS TO RANGE FROM HIGHEST ATMOSPHERIC LEVEL TO LOWEST.
 ! CURRENT INPUT DATA GIVES OPPOSITE - LEVELS REVERSED WHEN LOADING INPUT DATA.
-
+! MODEL EXPECTS INPUT DATA RANGE BETWEEN -180deg and +180deg.
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ! EXPLANATION OF TIME-RELATED VARIABLES, AND TESTING VALUES
@@ -45,8 +79,8 @@ SAVE
 !*******user modified variables**********************
 !
 
-INTEGER :: sday = 1,smon = 2,syear = 2000    !start day for calculations
-INTEGER :: edday = 1,edmon = 3,edyear = 2000  !end day for calculations (must be at least one day after start day)
+INTEGER :: sday,smon,syear    !start day for calculations
+INTEGER :: edday,edmon,edyear !end day for calculations (Exclusive. Must be at least one day after start day)
 INTEGER :: totdays
 INTEGER, PARAMETER :: totbtadays = 30   !number of days of data to keep for bta; i.e. how far back in time to calc.
                                        !must be less than days you have input data for
@@ -60,11 +94,11 @@ REAL, PARAMETER :: minpre = 2   !min daily precip to deal with (mm)
 INTEGER, PARAMETER :: bdy = 6   !boundary layers to ignore; trajectories will be tracked to this boundary
 
 CHARACTER(LEN=50), PARAMETER :: diri = "/g/data/hh5/tmp/w28/jpe561/back_traj/"   
-CHARACTER(LEN=100), PARAMETER :: diro = "/short/xc0/cxh603/QIBT_testing/Month/"  
+CHARACTER(LEN=100), PARAMETER :: diro = "/g/data/xc0/user/Holgate/exp02/"  
 CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfout/"
 CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfhrly/"  
 
-INTEGER, PARAMETER :: numthreads = 16   !set the number of parallel openmp threads
+INTEGER, PARAMETER :: numthreads = 8   !set the number of parallel openmp threads
 
 !CHARACTER(LEN=50), PARAMETER :: fdaylist = "top300precip_days_min0.5.txt"   !file containing
 !CHARACTER(LEN=50), PARAMETER :: fdaylist = "days_of_rain.txt"   !file containing list of days to do qibt on
@@ -2675,36 +2709,6 @@ END MODULE bt_subs
 
 PROGRAM back_traj
 
-!------------------------------------------------------------
-! This program calculates the quasi-isentropic back trajectories of
-! water vapor using a method based on Dirmeyer & Brubaker, 1999,
-! "Contrasting evaporative moisture sources during the drought of
-! 1988 and the flood of 1993", Journal of Geophysical Research, 104 D16
-! pg 19,383-19,397
-!
-! Input data are taken from NARCliM output (precip,evap (2D), temp,wind,
-! mixing ratios (3D)). Data here:
-! /srv/ccrc/data33/z3481416/CCRC-WRF3.6.0.5-SEB/ERA-Interim/R2_nudging/out/
-! 
-! The model outputs a daily 2d grid of water vapour contribution of each 
-! grid cell to the precipitation in each cell where it rained. It also
-! outputs the total rainfall depth in each cell where it rained, and the 
-! coordinates of each rain grid cell.
-! 
-! The output file is dimensioned (rec,lat,lon) where rec is the number of 
-! grid cells where it rained that day, lat & lon are the sizes of the domain in 
-! the lat and lon directions. Attributes include location and time and 
-! amount of precip in the pixel of interest (y,x,day,month,year,precip) 
-! each of which is a 1D array of length rec.
-!
-! Here I have amended the program to read in a list times (in days since
-! start of simulation) and calculate the back trajectories for the day
-! centered around the given time
-!
-! Here I have changed it so that parcels follow equivalent potential
-! temperature surfaces within the PBL and is advected usign w above that
-!-------------------------------------------------------------------
-
 USE netcdf
 USE global_data
 USE bt_subs
@@ -2763,9 +2767,25 @@ LOGICAL :: print_test
 REAL,ALLOCATABLE,DIMENSION(:,:) :: parcel_stats
 
 
+
 !----------------------------------------------------------------
 !
+! Retrieve simulation start and end dates from the command line input
+!
+character(len=12), dimension(:), allocatable :: args
 
+call get_command_argument(1,args(1))
+sday = string_to_int(args(1))
+call get_command_argument(2,args(2))
+smon = string_to_int(args(2))
+call get_command_argument(3,args(3))
+syear = string_to_int(args(3))
+call get_command_argument(4,args(4))
+edday = string_to_int(args(4))
+call get_command_argument(5,args(5))
+edmon = string_to_int(args(5))
+call get_command_argument(6,args(6))
+edyear = string_to_int(args(6))
 
 ! Find total number of days to run simulation for, given input start and end dates
 totdays=simlength(sday,smon,syear,edday,edmon,edyear)
