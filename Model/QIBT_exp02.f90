@@ -78,7 +78,7 @@ REAL, PARAMETER :: minpre = 2   !min daily precip to deal with (mm)
 INTEGER, PARAMETER :: bdy = 6   !boundary layers to ignore; trajectories will be tracked to this boundary
 
 CHARACTER(LEN=50), PARAMETER :: diri = "/g/data/hh5/tmp/w28/jpe561/back_traj/"   
-CHARACTER(LEN=100), PARAMETER :: diro = "/g/data/xc0/user/Holgate/exp02/"  
+CHARACTER(LEN=100), PARAMETER :: diro = "/g/data/xc0/user/Holgate/QIBT/exp02/"  
 CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfout/"
 CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfhrly/"  
 
@@ -2756,7 +2756,10 @@ REAL,ALLOCATABLE,DIMENSION(:,:) :: parcel_stats
 !
 ! Retrieve simulation start and end dates from the command line input
 !
-character(len=12), dimension(:), allocatable :: args
+INTEGER :: num_args
+character(len=50), dimension(:), allocatable :: args
+num_args = command_argument_count()
+allocate(args(num_args))  ! I've omitted checking the return status of the allocation
 
 call get_command_argument(1,args(1))
 sday = string_to_int(args(1))
@@ -2770,6 +2773,7 @@ call get_command_argument(5,args(5))
 edmon = string_to_int(args(5))
 call get_command_argument(6,args(6))
 edyear = string_to_int(args(6))
+
 
 ! Find total number of days to run simulation for, given input start and end dates
 totdays=simlength(sday,smon,syear,edday,edmon,edyear)
