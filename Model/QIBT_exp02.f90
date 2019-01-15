@@ -47,6 +47,17 @@
 ! ttdataday = = ((tt-1)/indatatsteps) + 1 = position of parcel time step in input file (calcd)
 ! ttdata = datatotsteps - datadaysteps - 1 + ttdataday = input file time step from the beginning of the loaded files (calcd)
 
+
+!%%%%%%% ASSUMPTIONS %%%%%%%
+! All forms of water are included (vapour, rain, ice, snow, cloud water) in the parcel's mixing ratio. Only vapour is used in the total precipitable water calculation, which is used to normalise the contribution of evaporation from a cell.
+! The PBL is NOT split from the upper atmosphere, i.e. the whole column is assumed to be well-mixed at the time step scale.
+! Height of parcel release is determined randomly from a humidity-weighted vertical profile, i.e the vertical distribution of water    vapour indicates where the rain forms.
+! Time of parcel release is determined randomly through a precipitation-weighted time profile.
+! The only source of parcel moisture is surface evaporation.
+! The only sink for parcel moisture is precipitation.
+! Program assumes data ranges between -180deg and +180deg. If other input data is to be used, the advect subroutine will need to be changed.
+! If input data of different structure is to be used for this program, subroutines (e.g. get_data, get_data_mixtot) will need to be changed. 
+
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
@@ -1345,7 +1356,7 @@ end if
 !evap converted to mm > Unit conversion checked and OK 18/7/17 :)
 evap = evap*(1440/datadaysteps)*60/Lv
   
-qt = qt + q ! i.e. QVAPOUR + SUM(QCLD,QRAIN,QSNOW,QICE)
+qt = qt + q ! i.e. SUM(QCLD,QRAIN,QSNOW,QICE) + QVAPOUR
 !qt = q
 qc = qt
 
@@ -1506,25 +1517,25 @@ if (totbtadays>1) then
 		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))    
 		if(status /= nf90_NoErr) call handle_err(status)
 		
-		clw(:,:,:,:(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
+		clw(:,:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
 
 		status = nf90_get_var(ncid, rnwid, temp(:,:,:,:), &
 		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 		if(status /= nf90_NoErr) call handle_err(status)
 		
-		rnw(:,:,:,:(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
+		rnw(:,:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
 
 		status = nf90_get_var(ncid, snowid, temp(:,:,:,:), &
 		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 		if(status /= nf90_NoErr) call handle_err(status)
 		
-		snow(:,:,:,:(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
+		snow(:,:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
 
 		status = nf90_get_var(ncid, iceid, temp(:,:,:,:), &
 		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
 		if(status /= nf90_NoErr) call handle_err(status)
 		
-		ice(:,:,:,:(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
+		ice(:,:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
 		
 		! close the netcdf file
 		status = nf90_close(ncid)
@@ -1867,7 +1878,7 @@ END SUBROUTINE calc_pw
 
 SUBROUTINE calc_tpw(mix,pres,surf_pres,ptop,tpw)
 !------------------------------------------
-! calculate the total precipitable water in the pbl from MM5 fields
+! calculate the total precipitable water in the pbl from input data fields
 ! at every level and time (3D field)
 !-------------------------------------------------
 
