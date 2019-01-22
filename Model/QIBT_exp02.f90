@@ -676,7 +676,7 @@ INTEGER :: status,jdimid,idimid,gwvcdimid,latid,lonid
 !differentiate whether we are doing whole days or around storm peaks
 if (peak) then
  print *,'we are doing peaks here!'
-  if (smon<10) then
+  if (mon<10) then
     !status = nf90_create(TRIM(diro)//"bt."//TRIM(int_to_string(syear))//"0" &
     status = nf90_create(TRIM(diro)//"bt."//TRIM(int_to_string(year))//"0" &
   		!//TRIM(int_to_string(smon))//"_"//TRIM(real_to_string(daynum-1))// &
@@ -694,7 +694,7 @@ if (peak) then
     if (status /= NF90_NOERR) call handle_err(status)
   end if
 else
-  if (smon<10) then
+  if (mon<10) then
     !status = nf90_create(TRIM(diro)//"bt."//TRIM(int_to_string(syear))//"0" &
     status = nf90_create(TRIM(diro)//"bt."//TRIM(int_to_string(year))//"0" &
   		!//TRIM(int_to_string(smon))//"_"//TRIM(int_to_string(INT(daynum-0.5)))// &
