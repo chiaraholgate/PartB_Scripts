@@ -89,7 +89,8 @@ REAL, PARAMETER :: minpre = 2   !min daily precip to deal with (mm)
 INTEGER, PARAMETER :: bdy = 6   !boundary layers to ignore; trajectories will be tracked to this boundary
 
 CHARACTER(LEN=50), PARAMETER :: diri = "/g/data/hh5/tmp/w28/jpe561/back_traj/"   
-CHARACTER(LEN=100), PARAMETER :: diro = "/g/data/xc0/user/Holgate/QIBT/exp02/"  
+!CHARACTER(LEN=100), PARAMETER :: diro = "/g/data/xc0/user/Holgate/QIBT/exp02/"
+CHARACTER(LEN=100), PARAMETER :: diro = outdir  
 CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfout/"
 CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfhrly/"  
 
@@ -2765,7 +2766,7 @@ REAL,ALLOCATABLE,DIMENSION(:,:) :: parcel_stats
 
 !----------------------------------------------------------------
 !
-! Retrieve simulation start and end dates from the command line input
+! Retrieve simulation start and end dates, and output directory, from the command line input
 !
 INTEGER :: num_args
 character(len=50), dimension(:), allocatable :: args
@@ -2784,7 +2785,10 @@ call get_command_argument(5,args(5))
 edmon = string_to_int(args(5))
 call get_command_argument(6,args(6))
 edyear = string_to_int(args(6))
+call get_command_argument(7,args(7))
+outdir = string_to_int(args(7))
 
+print *,outdir
 
 ! Find total number of days to run simulation for, given input start and end dates
 totdays=simlength(sday,smon,syear,edday,edmon,edyear)
@@ -2951,7 +2955,11 @@ do dd = 1, totdays
   ! Get the variables required for back trajectory calculations for the current day
   call get_data(precip,evap,u,v,w,temp,mix,mixcld,mixtot,pp,pb,pbl_hgt,psfc)
   
-  print *,'L2950, got data...'    
+  print *,'L2950, got data...'   
+  
+  CYCLE
+  
+  STOP
 
   ! Calculate the pressure field and surface pressure
   ! In previous (MM5-based) model, surface pressure had to be calculated - not so here, it is output from wrf.
