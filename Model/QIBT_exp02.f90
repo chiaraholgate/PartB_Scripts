@@ -2769,7 +2769,7 @@ REAL,ALLOCATABLE,DIMENSION(:,:) :: parcel_stats
 ! Retrieve simulation start and end dates, and output directory, from the command line input
 !
 INTEGER :: num_args
-character(len=50), dimension(:), allocatable :: args
+character(len=100), dimension(:), allocatable :: args
 num_args = command_argument_count()
 allocate(args(num_args))  ! I've omitted checking the return status of the allocation
 
