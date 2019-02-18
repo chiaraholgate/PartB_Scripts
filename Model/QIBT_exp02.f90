@@ -2786,7 +2786,7 @@ edmon = string_to_int(args(5))
 call get_command_argument(6,args(6))
 edyear = string_to_int(args(6))
 call get_command_argument(7,args(7))
-outdir = string_to_int(args(7))
+outdir = args(7)
 
 print *,outdir
 
