@@ -8,25 +8,29 @@
 # USE
 #===========
 # The order of these operations is important.
-# (1) Load these modules on raijin: netcdf/4.2.1.1 openmpi/3.0.1 intel-fc/2019.0.117 pbs
+# (1) Load these modules on raijin: 1) pbs 2) dot 3) intel-fc/12.1.9.293 4) intel-cc/12.1.9.293 5) netcdf/4.2.1.1 6) openmpi/1.10.2
 # (2) Type this command on raijin: ulimit -s unlimited
-# (3) Compile using following command: mpif90 -O2 -xHost QIBT_exp02.f90 -o QIBT_exp02 -lnetcdff -fopenmp -g -traceback
+# (3) Compile using following command: ifort -openmp QIBT_exp02.f90 -o QIBT_exp02 -lnetcdff -lnetcdf
 # (4) Once the series of weekly decks have been created, run each as ./<deck name> in the desired NCI directory. If you want to run all decks in the directory at once, use following command (or run it from it's own shell): for file in Decks/*; do Decks/${file##*/}; done
 
 
 cat > ./QIBT_exp02_%syear%_%smon%_%sday%.pbs << EOF_QIBT_exp02
 #!/bin/bash
-#PBS -P w28
-#PBS -q normal
-#PBS -l ncpus=16
-#PBS -l mem=32GB
+#PBS -P %proj%
+#PBS -q %queue%
+#PBS -l ncpus=%ncpus%
+#PBS -l mem=%lmem%GB
 #PBS -l walltime=%wallhours%:00:00
 #PBS -l wd
-module load netcdf/4.2.1.1 openmpi/3.0.1 intel-fc/2019.0.117 pbs
-ulimit -s unlimited
-export OMP_NUM_THREADS=16
+#PBS -l jobfs=%jobfs%GB
 
-./QIBT_exp02 %sday% %smon% %syear% %edday% %edmon% %edyear%
+ulimit -s unlimited
+export OMP_NUM_THREADS=%nthreads%
+export DIROUT=%dirout%
+
+./QIBT_exp02 %sday% %smon% %syear% %edday% %edmon% %edyear% $PBS_JOBFS/$PBS_JOBID
+
+cp $PBS_JOBFS/$PBS_JOBID/* $DIROUT
 
 EOF_QIBT_exp02
 
