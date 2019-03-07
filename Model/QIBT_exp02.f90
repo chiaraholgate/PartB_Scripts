@@ -90,11 +90,11 @@ INTEGER, PARAMETER :: bdy = 6   !boundary layers to ignore; trajectories will be
 
 CHARACTER(LEN=50), PARAMETER :: diri = "/g/data/hh5/tmp/w28/jpe561/back_traj/"   
 !CHARACTER(LEN=100), PARAMETER :: diro = "/g/data/xc0/user/Holgate/QIBT/exp02/"
-CHARACTER(LEN=100), PARAMETER :: diro = outdir  
+CHARACTER(LEN=100) :: diro  
 CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfout/"
 CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfhrly/"  
 
-INTEGER, PARAMETER :: numthreads = 16   !set the number of parallel openmp threads
+INTEGER, PARAMETER :: numthreads = 28   !set the number of parallel openmp threads
 
 !CHARACTER(LEN=50), PARAMETER :: fdaylist = "top300precip_days_min0.5.txt"   !file containing
 !CHARACTER(LEN=50), PARAMETER :: fdaylist = "days_of_rain.txt"   !file containing list of days to do qibt on
@@ -137,7 +137,7 @@ REAL, PARAMETER :: deg_dist = 111.   !average distance of 1 degree lat is assume
 
 COMMON /global_vars/ daytsteps,totsteps,indatatsteps,datadaysteps,datatotsteps, &
 		dim_i,dim_j,dim_k,sday,smon,syear,mon,year,day,dd,totpts, &
-		fdim_i,fdim_j,ssdim
+		fdim_i,fdim_j,ssdim,diro
 
 !$OMP THREADPRIVATE(/global_vars/)
 
@@ -2786,9 +2786,9 @@ edmon = string_to_int(args(5))
 call get_command_argument(6,args(6))
 edyear = string_to_int(args(6))
 call get_command_argument(7,args(7))
-outdir = args(7)
+diro = args(7)
 
-print *,outdir
+print *,diro
 
 ! Find total number of days to run simulation for, given input start and end dates
 totdays=simlength(sday,smon,syear,edday,edmon,edyear)
@@ -2957,10 +2957,6 @@ do dd = 1, totdays
   
   print *,'L2950, got data...'   
   
-  CYCLE
-  
-  STOP
-
   ! Calculate the pressure field and surface pressure
   ! In previous (MM5-based) model, surface pressure had to be calculated - not so here, it is output from wrf.
   ! Pressure at heights is calculated by adding the base state pressure to the perturbation pressure at each level.
