@@ -1,0 +1,48 @@
+#!/bin/bash
+
+# PURPOSE
+#===========
+# This script is a template for creating a PBS jobscript for each week to be simulated by the QIBT program, and submitting it to the queue.
+# The related python script "Create_QIBT_raijin_decks.py" creates a series of new decks by substituting the text in this template framed by % signs. 
+
+# USE
+#===========
+# (1) Compile program
+# **TO COMPILE ON SANDY BRIDGE**
+# module load pbs dot intel-fc/12.1.9.293 intel-cc/12.1.9.293 netcdf/4.2.1.1 openmpi/1.10.2
+# export OMP_NUM_THREADS=16
+# ulimit -s unlimited
+# ifort -openmp QIBT_exp02.f90 -o QIBT_exp02 -lnetcdff -lnetcdf
+ 
+# **TO COMPILE ON BROADWELL**
+# module load pbs dot intel-fc/12.1.9.293 intel-cc/17.0.1.132 netcdf/4.2.1.1 openmpi/1.10.2
+# export OMP_NUM_THREADS=28
+# ulimit -s unlimited
+# ifort -xCORE-AVX2 -openmp QIBT_exp02.f90 -o QIBT_exp02 -lnetcdff -lnetcdf
+
+# (2) Run the decks from /home/603/cxh603/PhD/PartB/Scripts/Model/exp03
+# e.g. cd /home/603/cxh603/PhD/PartB/Scripts/Model/exp03
+#      for file in pbs_scripts/Decks/Summer/*; do Decks/Summer/${file##*/};done.
+
+#===========
+cat > ./pbs_scripts/QIBT_exp03_1983_7_17.pbs << EOF_QIBT_exp03
+#!/bin/bash
+#PBS -P w28
+#PBS -q normalbw
+#PBS -l ncpus=28
+#PBS -l mem=128GB
+#PBS -l walltime=24:00:00
+#PBS -l wd
+#PBS -l jobfs=500GB
+
+ulimit -s unlimited
+export OMP_NUM_THREADS=28
+export DIROUT=/g/data/xc0/user/Holgate/QIBT/exp03
+
+./QIBT_exp03 17 7 1983 24 7 1983 \$PBS_JOBFS/
+
+cp \$PBS_JOBFS/* \$DIROUT
+
+EOF_QIBT_exp03
+
+qsub ./pbs_scripts/QIBT_exp03_1983_7_17.pbs

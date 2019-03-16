@@ -1,0 +1,16 @@
+#!/bin/bash
+#PBS -P %proj%
+#PBS -q %queue%
+#PBS -l ncpus=%ncpus%
+#PBS -l mem=%lmem%GB
+#PBS -l walltime=%wallhours%:00:00
+#PBS -l wd
+#PBS -l jobfs=%jobfs%MB
+
+ulimit -s unlimited
+export OMP_NUM_THREADS=%nthreads%
+export DIROUT=%dirout%
+
+./QIBT_exp02 %sday% %smon% %syear% %edday% %edmon% %edyear% $PBS_JOBFS/
+
+cp $PBS_JOBFS/* $DIROUT
