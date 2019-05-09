@@ -1,0 +1,7 @@
+#!/bin/bash
+
+ifort -I$NETCDFFINCDIR -c -fast -free QIBT_exp02a.f90 -qopenmp -check bounds -g
+
+ifort -o QIBT_exp02a QIBT_exp02a.o -qopenmp -L$NETCDFCLIBDIR -lnetcdf -L$NETCDFFLIBDIR -lnetcdff -shared-intel -L$HDF5LIBDIR -lhdf5_hl -lhdf5
+
+./QIBT_exp02a > test.txt

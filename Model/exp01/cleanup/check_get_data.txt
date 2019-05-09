@@ -1,0 +1,56 @@
+!!! SIM DAY SHOULD BE AT THE END OF THE ARRAY, DAY BEFORE JUST BEFORE THAT, ETC.
+!!! LAST BACK-TRACKED DAY SHOULD BE AT THE START OF THE ARRAY.
+!!! THE LAST TIME POSITION IN THE ARRAY SHOULD BE THE FIRST TIMESTEP OF SIM DAY + 1.
+
+MM5daysteps = 8
+MM5totsteps = 249 for 30 bt days, or 17 for 1 bt day.
+
+! get_data
+SIM DAY, when totbtadays>1
+1ST DAY
+status = nf90_get_var(ncid, qid, temp(:,:,:,:), &
+	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
+	if(status /= nf90_NoErr) call handle_err(status)
+	
+	q(:,:,:,(datatotsteps-datadaysteps):(datatotsteps-1)) = temp(:,:,dim_k:1:-1,:)
+
+PREV DAY
+do i = 1,totbtadays
+status = nf90_get_var(ncid, qid, temp(:,:,:,:), &
+		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
+		if(status /= nf90_NoErr) call handle_err(status)
+		
+		q(:,:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
+end do
+
+NEXT DAY
+status = nf90_get_var(ncid, qid, temp(:,:,:,1), &
+	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
+	if(status /= nf90_NoErr) call handle_err(status)
+	
+	q(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
+
+
+! get_data_mixtot 
+SIM DAY, when totbtadays>1
+1ST DAY
+status = nf90_get_var(ncid, clwid, temp(:,:,:,:), &
+	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))    
+	if(status /= nf90_NoErr) call handle_err(status)
+	
+	clw(:,:,:,(datatotsteps-datadaysteps):(datatotsteps-1)) = temp(:,:,dim_k:1:-1,:)
+	
+PREV DAY
+do i = 1,totbtadays
+status = nf90_get_var(ncid, clwid, temp(:,:,:,:), &
+		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))    
+		if(status /= nf90_NoErr) call handle_err(status)
+		
+		clw(:,:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
+
+NEXT DAY
+status = nf90_get_var(ncid, clwid, temp(:,:,:,1), &
+	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))    
+	if(status /= nf90_NoErr) call handle_err(status)
+	
+	clw(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)

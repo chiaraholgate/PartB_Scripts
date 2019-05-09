@@ -1,0 +1,60 @@
+
+scp z3131380@hurricane.ccrc.unsw.edu.au:/home/z3131380/hdrive/PhD/PartB/Scripts/Model/exp03/QIBT_exp03.f90 .
+scp z3131380@hurricane.ccrc.unsw.edu.au:/home/z3131380/hdrive/PhD/PartB/Scripts/Model/jobscript .
+scp -r z3131380@hurricane.ccrc.unsw.edu.au:/home/z3131380/hdrive/PhD/PartB/Scripts/Model/Decks/Summer .
+scp -r z3131380@hurricane.ccrc.unsw.edu.au:/home/z3131380/hdrive/PhD/PartB/Scripts/Model/pbs_scripts .
+scp -r z3131380@hurricane.ccrc.unsw.edu.au:/home/z3131380/hdrive/PhD/PartB/Scripts/Model/exp03/Decks/ .
+scp cxh603@raijin.nci.org.au://home/603/cxh603/PhD/PartB/Test_output/Australia/100parcels/TS10min/bt.200001_31.nc .
+scp cxh603@raijin.nci.org.au:/home/603/cxh603/PhD/PartB/Scripts/Model/filenames.txt .
+scp cxh603@raijin.nci.org.au:/g/data/xc0/user/Holgate/QIBT/exp02/exp02_results_list.txt .
+scp cxh603@raijin.nci.org.au:/g/data/xc0/user/Holgate/QIBT/exp02/QIBT_exp02_incomplete_days.txt .
+scp cxh603@raijin.nci.org.au:/home/603/cxh603/PhD/PartB/Scripts/Model/exp03/Incomplete_weeks_exp03_Try1.txt .
+scp -r z3131380@hurricane.ccrc.unsw.edu.au:/home/z3131380/hdrive/PhD/PartB/Scripts/Model/exp03/Change_pbs_scripts_incomplete_weeks.py .
+scp -r z3131380@hurricane.ccrc.unsw.edu.au:/home/z3131380/hdrive/PhD/PartB/Scripts/Model/exp03/Rerun_incomplete_weeks.sh .
+scp cxh603@raijin.nci.org.au:/g/data/xc0/user/Holgate/QIBT/exp03/bt.201312_9.nc .
+
+**TO COMPILE ON SANDY BRIDGE**
+module load pbs dot intel-fc/12.1.9.293 intel-cc/12.1.9.293 netcdf/4.2.1.1 openmpi/1.10.2
+export OMP_NUM_THREADS=16
+ulimit -s unlimited
+ifort -openmp QIBT_exp02.f90 -o QIBT_exp02 -lnetcdff -lnetcdf
+
+**TO COMPILE ON BROADWELL**
+module load pbs dot intel-fc/12.1.9.293 intel-cc/17.0.1.132 netcdf/4.2.1.1 openmpi/1.10.2
+export OMP_NUM_THREADS=28
+ulimit -s unlimited
+ifort -xCORE-AVX2 -openmp QIBT_exp02.f90 -o QIBT_exp02 -lnetcdff -lnetcdf
+
+**TO COMPILE ON SKYLAKE**
+module load pbs dot intel-fc/2019.3.199 intel-cc/2019.3.199 netcdf/4.6.1 openmpi/4.0.0
+export OMP_NUM_THREADS=32
+ulimit -s unlimited
+ifort -xSKYLAKE -parallel QIBT_exp04.f90 -o QIBT_exp04 -lnetcdff -lnetcdf
+
+
+
+Compilation options:
+mpif90 -openmp QIBT_simple_mpi.f90 -o QIBT_simple_mpi -lnetcdff -lnetcdf
+mpif90 -openmp QIBT_simple_mpi_TestB.f90 -o QIBT_simple_mpi_TestB -lnetcdff -lnetcdf -O3 -xHost
+ifort -openmp QIBT_exp02.f90 -o QIBT_exp02 -lnetcdff -lnetcdf
+
+Check status options:
+qstat -u cxh603
+nqstat_anu <jobid> # while still running
+qstat -fx <jobid> # within 24h since completion
+
+To run all decks in decks subfolder 1:
+for file in ./Decks/1/*; do ./Decks/1/${file##*/}; done
+In subfolder by year:
+for file in ./Decks/Summer/*1979*; do ./Decks/Summer/${file##*/}; done
+
+To run all .pbs scripts for incomplete days: (some at a time)
+for file in ./pbs_scripts/*2012*; do 
+qsub ./pbs_scripts/${file##*/}; 
+done
+
+
+To delete all my jobs at once: 
+qselect -u cxh603 | xargs qdel
+
+

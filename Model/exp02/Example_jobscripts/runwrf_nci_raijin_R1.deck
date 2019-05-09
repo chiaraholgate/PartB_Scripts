@@ -1,0 +1,535 @@
+#!/bin/bash
+
+# PURPOSE
+#===========
+# In conjunction with the calling Python script that substitutes template texts
+# (e.g., nci_raijin_oeh_R1_decks.py).
+# to create a monthly WRF deck. The purpose of the latter deck is to
+# create 3 pbs scripts to get boundary conditions for WRF from CCRC servers, to 
+# run a WRF job for NARCliM simulations, to call the next deck, and to send the output data
+# to /massdata. The scripts support CCRC-WRF3.5.1 output diagnostics, and additional
+# hourly output.
+
+# STATUS
+#========
+# Preliminarily Works for CCRC-WRF3.6.0.5 R1 without nudging, and with ERA-Interim
+# driver data from WRF3.5.* 
+# To work with SEB version of CCRC-WRF3.6.0.5
+# Final tests should be done by looking at WRF output.
+
+# CAUTION! Output /massdata directories must be already created EXPLICITLY
+# USING THE PROJECT USED: W28
+
+# TODO
+# ======
+# For faster compression, change level to -d 5 for the output script
+
+# USAGE
+#========
+# 1. Call the program with a Python scripts that substitutes template texts (e.g., 
+# nci_raijin_oeh_R1_decks.py)
+
+# METHOD
+#========
+# <> Variables refer to template texts
+# The resulting monthly script:
+# 1. Creates PBS script gb_<syear>_<smonth>.pbs to get boundary data from storm servers and then
+#    run this script
+# 2. Creates PBS script R*_<syear><smonth><sday>.pbs to run WRF. This includes commands to remove previous
+#    output files, update namelist.input, and finally to run the WRF job.
+# 3. Creates PBS script po_<syear>_<smonth>_<sday>.pbs to send the output data to /massdata
+#    and to start the next job. Includes starting the next job, removing unneeded time dimension from
+#    relevant variables, compressing files, transferring files to massdata, varying the transferred
+#    files, and deleting residuals
+# 4. Runs the next monthly deck, and executes the above mentioned scripts
+
+# INPUT
+#=======
+# (Implicit) Template substitution texts in the calling Python script
+#
+# INPUT FOR THE RESULTING MONTHLY DECKS
+# 1. Variety of variables in the WRF namelist below
+# 2. (Implicit) wrf* files (for removing unnecessary time dimension from some vars, compression, etc.)
+
+# CALLS
+#=======
+# No externals
+#
+# WHAT THE RESULTING MONTHLY DECKS CALL
+# 1. wrf.exe
+# 2. Deck to run the next job: ./runwrf_<nyear>_<nmonth>_<eday>.deck
+# 3. NCO utilities
+# 4. nccopy NetCDF utility for compression
+# 5. Newly created scripts gb_<syear>_<smonth>.pbs, R*_<syear><smonth><sday>.pbs, and po_<syear>_<smonth>_<sday>.pbs
+
+# OUTPUT
+#========
+# Monthly decks of the form runwrf_<syear>_<smonth>_<sday>.deck
+# 
+# EACH RESULTING DECK OUTPUTS
+# 1. PBS Scripts gb_<syear>_<smonth>.pbs, R*_<syear><smonth><sday>.pbs, and po_<syear>_<smonth>_<sday>.pbs
+# 2. WRF model output. Note that more output is produced by the deck that runs the next job
+
+# HISTORY
+#=========
+# ?? Written
+# Mar 17 2014 => Commented by Roman Olson, CCRC
+# May 02 2014 => Now works with copying to /massdata
+# May 05 2014 => Fixed escape characters bugs.
+# May 06 2014 => Added support for hourly output
+# May 28 2014 => Modified to work with projected CCRC-WRF3.6 SEB
+# Jun 13 2014 => Small typo fixed - added prec_acc_dt
+# Jun 18 2014 => Bug fix -- removed counting of massdata files
+# Jun 20 2014 => Another bug fix. Now can work with any project.
+# Aug 18 2014 => Changed to work with CCRC-WRF3.6.0.5, added shallow 
+#                convection.
+# Aug 19 2014 => Increased walltime
+# Aug 20 2014 => Further increased walltime, then decreased it and removed
+#                shallow convection:)
+# Nov 04 2014 => Fix a bug whereby the program would continue running when
+#                removing extra time dimension from output failed
+# Aug 31 2015 => Changed to manually load netcdf module
+#==============================================================================
+
+cat > ./gbR1_%syear%_%smonth%.pbs << EOF_gb
+#!/bin/bash
+#PBS -m a
+#PBS -M %email%
+#PBS -P %project%
+#PBS -q copyq
+#PBS -l walltime=01:30:00
+#PBS -l mem=2GB
+#PBS -l ncpus=1
+#PBS -l other=mdss
+#PBS -j oe
+#PBS -l wd
+
+echo "Starting time:"
+date
+
+#rm wrfrst_d0*
+
+#get files with rsync - if any of them fail then fail out of the pbs job
+cp %BDYdir%/wrfbdy_d01_%syear%-%smonth%-%sday% .
+es=\$?
+[ \$es -ne 0 ] && exit \$es
+cp %BDYdir%/wrflowinp_d0?_%syear%-%smonth%-%sday% .
+es=\$?
+[ \$es -ne 0 ] && exit \$es
+%sexist%
+if [ ! -e wrfrst_d01_%syear%-%smonth%-%sday%_00:00:00 ]; then
+  cp %RSTdir%/wrfrst_d0?_%syear%-%smonth%* .
+  es=\$?
+  [ \$es -ne 0 ] && exit \$es
+fi
+%eexist%
+
+mv wrfbdy_d01_%syear%-%smonth%-%sday% wrfbdy_d01
+mv wrflowinp_d01_%syear%-%smonth%-%sday% wrflowinp_d01
+mv wrflowinp_d02_%syear%-%smonth%-%sday% wrflowinp_d02
+
+qsub R1%syear%%smonth%%sday%.pbs
+
+echo "Ending time:"
+date
+EOF_gb
+
+cat > ./R1%syear%%smonth%%sday%.pbs << EOF_wrf
+#!/bin/bash
+#PBS -m a
+#PBS -M %email%
+#PBS -P %project%
+#PBS -q normal
+#PBS -l walltime=7:00:00
+#PBS -l mem=576GB
+#PBS -l ncpus=336
+#PBS -j oe
+#PBS -l wd
+
+echo "Starting time:"
+date
+rm rsl.*
+
+#write the namelist.input
+cat > ./namelist.input << EOF_namelist
+ &time_control
+ run_days                            = %rundays%,
+ run_hours                           = 0,
+ run_minutes                         = 0,
+ run_seconds                         = 0,
+ start_year                          = %syear%, %syear%, %syear%,
+ start_month                         = %smonth%, %smonth%, %smonth%,
+ start_day                           = %sday%, %sday%, %sday%,
+ start_hour                          = 00,   00,   00,
+ start_minute                        = 00,   00,   00,
+ start_second                        = 00,   00,   00,
+ end_year                            = %nyear%, %nyear%, %nyear%,
+ end_month                           = %nmonth%, %nmonth%, %nmonth%,
+ end_day                             = %eday%, %eday%, %eday%,
+ end_hour                            = 01,   00,   00,
+ end_minute                          = 00,   00,   00,
+ end_second                          = 00,   00,   00,
+ interval_seconds                    = 21600
+ input_from_file                     = .true.,.true.,.false.,
+ history_interval                    = 180, 180,   60,
+ frames_per_outfile                  = 8,8, 1000,
+ restart                             = %isrestart%,
+ restart_interval                    = %resint%,
+ override_restart_timers             = .true.,
+ write_hist_at_0h_rst                = .true.,
+ io_form_history                     = 2
+ io_form_restart                     = 2
+ io_form_input                       = 2
+ io_form_boundary                    = 2
+ debug_level                         = 0
+ output_diagnostics                  = 1,
+ auxinput4_inname                    = "wrflowinp_d<domain>"
+ auxinput4_interval                  = 360,360,
+ io_form_auxinput4                   = 2,
+ auxhist3_outname                    = "wrfxtrm_d<domain>_<date>"
+ io_form_auxhist3                    = 2
+ auxhist3_interval                   = 1440,1440
+ frames_per_auxhist3                 = %rundays%,%rundays%
+ auxhist4_outname                    = "wrfhrly_d<domain>_<date>"
+ io_form_auxhist4                    = 2
+ auxhist4_interval                   = 60,60
+ frames_per_auxhist4                 = %runhours%,%runhours%
+ auxhist8_outname                    = "wrfdly_d<domain>_<date>"
+ auxhist8_interval                   = 1440,1440
+ io_form_auxhist8                    = 2,
+ frames_per_auxhist8                 = %rundays%,%rundays%
+ /
+ 
+ &diagnostics
+ max_rain_5m                         = 1, 1,
+ max_wind_5m                         = 1, 1,
+ max_rain_10m                        = 1, 1,
+ max_wind_10m                        = 1, 1,
+ max_rain_20m                        = 1, 1,
+ max_wind_20m                        = 1, 1,
+ max_rain_30m                        = 1, 1,
+ max_wind_30m                        = 1, 1,
+ max_rain_60m                        = 1, 1,
+ max_wind_60m                        = 1, 1,
+ max_window                          = 225,
+ /
+
+ &domains
+ time_step                           = 180,
+ time_step_fract_num                 = 0,
+ time_step_fract_den                 = 1,
+ max_dom                             = 2,
+ s_we                                = 1,     1,     1,
+ e_we                                = 216,    326,   94,
+ s_sn                                = 1,     1,     1,
+ e_sn                                = 145,    201,   91,
+ s_vert                              = 1,     1,     1,
+ e_vert                              = 30,    30,    28,
+ eta_levels =1.00,0.995,0.99,0.98,0.97,0.96,0.94,0.92,0.89,0.86,0.83,0.80,0.77,0.72,0.67,0.62,0.57,0.52,0.47,0.42,0.37,0.32,0.27,0.22,0.17,0.12,0.07,0.04,0.02,0.00,
+ dx                                  = 48918.09, 9783.618,  3333,
+ dy                                  = 48918.09, 9783.618,  3333,
+ grid_id                             = 1,     2,     3,
+ parent_id                           = 0,     1,     2,
+ i_parent_start                      = 1,     82,    30,
+ j_parent_start                      = 1,     36,    30,
+ parent_grid_ratio                   = 1,     5,     3,
+ parent_time_step_ratio              = 1,     5,     3,
+ feedback                            = 0,
+ smooth_option                       = 0,
+ nproc_x                             = 16,
+ nproc_y                             = 10,
+ /
+
+ &physics
+ mp_physics                          = 14,    14,     3,
+ ra_lw_physics                       = 1,     1,     1,
+ ra_sw_physics                       = 1,     1,     1,
+ radt                                = 10,    10,    10,
+ cam_abs_freq_s                      = 10800
+ levsiz                              = 59
+ paerlev                             = 29
+ cam_abs_dim1                        = 4
+ cam_abs_dim2                        = 28
+ sf_sfclay_physics                   = 2,     2,     1,
+ sf_surface_physics                  = 2,     2,     1,
+ bl_pbl_physics                      = 2,     2,     1,
+ bldt                                = 0,     0,     0,
+ cu_physics                          = 1,     1,     0,
+ cudt                                = 0,     0,     5,
+ isfflx                              = 1,
+ surface_input_source                = 1,
+ num_soil_layers                     = 4,
+ sf_urban_physics                    = 0,
+ sst_update                          = 1,
+ tmn_update                          = 1,
+ lagday                              = 150,
+ sst_skin                            = 1,
+ usemonalb                           = .true.,
+ rdmaxalb                            = .true.,
+ slope_rad                           = 1,
+ topo_shading                        = 1,
+ shadlen                             = 25000.,
+ bucket_mm                           = 1000.,
+ prec_acc_dt                         = 60.,   60.,   60.,
+ /
+
+ &fdda
+ /
+
+ &dynamics
+ rk_ord                              = 3,
+ w_damping                           = 1,
+ diff_opt                            = 1, 1,
+ km_opt                              = 4, 4,
+ diff_6th_opt                        = 0, 0,
+ diff_6th_factor                     = 0.12,
+ base_temp                           = 290.
+ damp_opt                            = 1,
+ zdamp                               = 5000.,  5000.,  5000.,
+ dampcoef                            = 0.01,   0.01,   0.01,
+ khdif                               = 0,      0,      0,
+ kvdif                               = 0,      0,      0,
+ non_hydrostatic                     = .true., .true., .true.,
+ moist_adv_opt                       = 1,      1,      1,     
+ scalar_adv_opt                      = 1,      1,      1, 
+ gwd_opt                             = 1, 
+ /
+
+ &bdy_control
+ spec_bdy_width                      = 5,
+ spec_zone                           = 1,
+ relax_zone                          = 4,
+ specified                           = .true., .false.,.false.,
+ nested                              = .false., .true., .true.,
+ /
+
+ &grib2
+ /
+
+ &namelist_quilt
+ nio_tasks_per_group = 1,
+ nio_groups = 2,
+ /
+EOF_namelist
+
+dos2unix namelist.input
+
+#rm wrfout_d0*
+
+limit stacksize unlimit
+
+export OMP_NUM_THREADS=2
+mpirun -np 162 --map-by slot:PE=$OMP_NUM_THREADS ./wrf.exe
+
+#rm wrfout_d0*
+
+
+ncinv=\$?
+  if [ \$ncinv != 0 ]; then
+    echo "WRF did not work"
+    exit \$ncinv
+  fi
+
+#mv output to temp directory
+tempdir="wrftemp"
+ii=1
+
+while [ -e \$tempdir ]; do 
+  tempdir=wrftemp\$ii
+  ((ii++))
+done
+
+mkdir \$tempdir
+
+mv ./wrf{o,d,h,x}* \$tempdir/.
+
+
+#run next deck
+./runwrf_%nyear%_%nmonth%_%eday%.deck
+
+
+#run postprocess and move output files
+cd \$tempdir
+qsub ../ppR1_%syear%_%smonth%_%sday%.pbs
+
+echo "Ending time:"
+date
+EOF_wrf
+
+
+cat > ./ppR1_%syear%_%smonth%_%sday%.pbs << EOF_pp
+#!/bin/bash
+#PBS -m a
+#PBS -M %email%
+#PBS -P %project%
+#PBS -q copyq
+#PBS -l walltime=10:00:00
+#PBS -l mem=2GB
+#PBS -l ncpus=1
+#PBS -l other=mdss
+#PBS -j oe
+#PBS -l wd
+
+echo "Starting time:"
+date
+
+module load nco
+module load parallel
+
+
+#remove unneeded time dimension from relevant variables
+remove_time()
+{
+  ncwa -a Time -d Time,0 -v LU_INDEX,LANDMASK,IVGTYP,ISLTYP,MAPFAC_M,MAPFAC_U,MAPFAC_V,MAPFAC_MX,MAPFAC_MY,MAPFAC_UX,MAPFAC_UY,MAPFAC_VX,MAPFAC_VY,MF_VX_INV,F,E,SINALPHA,COSALPHA,HGT,XLAT,XLONG,XLAT_U,XLONG_U,XLAT_V,XLONG_V,XLAND,MUB \$1 \$2
+  ncinv=\$?
+  if [ \$ncinv != 0 ]; then
+    echo "ncwa did not work"
+    rm \$2
+    exit \$ncinv
+  fi
+}
+remove_time ./wrfout_d01_%syear%-%smonth%-%sday%* ./wrfout_d01.nc
+remove_time ./wrfout_d02_%syear%-%smonth%-%sday%* ./wrfout_d02.nc
+
+
+replace_variables ()
+{
+  f=\$1
+  bak=\$f.bak
+
+  mv \$f \$bak
+  time ncks -x -v LU_INDEX,LANDMASK,IVGTYP,ISLTYP,MAPFAC_M,MAPFAC_U,MAPFAC_V,MAPFAC_MX,MAPFAC_MY,MAPFAC_UX,MAPFAC_UY,MAPFAC_VX,MAPFAC_VY,MF_VX_INV,F,E,SINALPHA,COSALPHA,HGT,XLAT,XLONG,XLAT_U,XLONG_U,XLAT_V,XLONG_V,XLAND,MUB \$bak \$f
+  ncinv=\$?
+  if [ \$ncinv != 0 ]; then
+    echo "putting invariant fields back did not work"
+    mv \$bak \$f
+    exit \$ncinv
+  fi
+
+  time ncks -A \$2 \$f
+  ncinv=\$?
+  if [ \$ncinv != 0 ]; then
+    echo "copying attributes did not work"
+    exit \$ncinv
+  fi
+
+  rm \$bak
+}
+export -f replace_variables
+
+parallel --halt soon,fail=1 replace_variables {} ./wrfout_d01.nc ::: ./wrfout_d01_%syear%-%smonth%*
+perr=\$?
+if [ \$perr != 0 ]; then
+  echo "replace_variables did not work"
+  exit \$perr
+fi
+
+parallel --halt soon,fail=1 replace_variables {} ./wrfout_d02.nc ::: ./wrfout_d02_%syear%-%smonth%*
+perr=\$?
+if [ \$perr != 0 ]; then
+  echo "replace_variables did not work"
+  exit \$perr
+fi
+
+rm ./wrfout_d0?.nc
+
+
+#
+# Compression of files
+deflate ()
+{
+  file=\$1
+  bak=\$file.bak
+
+  mv \$file \$bak
+  fac=\$?
+  if [ \$fac != 0 ]; then
+    echo "'"\$file"' does not exist"
+    exit \$fac
+  fi
+
+  time nccopy -d 5 -s \$bak \$file 
+  nc=\$?
+  if [ \$nc != 0 ]; then
+    echo "nccopy does not work"
+    mv \$bak \$file
+    exit \$nc
+  fi
+
+  rm \$bak
+}
+export -f deflate
+
+parallel --halt soon,fail=1 deflate ::: ./wrf*_%syear%-%smonth%*
+perr=\$?
+if [ \$perr != 0 ]; then
+  echo "deflate did not work"
+  exit \$perr
+fi
+
+
+qsub ../poR1_%syear%_%smonth%_%sday%.pbs
+
+echo "Ending time:"
+date
+EOF_pp
+
+
+cat > ./poR1_%syear%_%smonth%_%sday%.pbs << EOF_po
+#!/bin/bash
+#PBS -m a
+#PBS -M %email%
+#PBS -P %project%
+#PBS -q copyq
+#PBS -l walltime=10:00:00
+#PBS -l mem=2GB
+#PBS -l ncpus=1
+#PBS -l other=mdss
+#PBS -j oe
+#PBS -l wd
+#PBS -o .
+
+echo "Starting time:"
+date
+
+#TRANSFERING TO REMOTE DESTINATION #!+
+# Restarts #!+
+rsync -vrlt ../wrfrst_d0?_%nyear%-%nmonth%-%eday%* %RSTdir%/
+es=\$?
+if [ \$es != 0 ]; then
+    exit \$es
+fi
+
+
+#rsync files - if any of them fail then fail out of the pbs job
+rsync -vrlt ./wrf*%syear%-%smonth%* %OUTdir%/
+es=\$?
+if [ \$es != 0 ]; then
+    exit \$es
+fi
+
+# DELETING RESIDUALS
+tdir=\$PWD
+cd ..
+rm -R \$tdir
+%sexist%
+rm wrfrst_d0?_%syear%-%smonth%-%sday%*
+%eexist%
+
+
+
+echo "Ending time:"
+date
+EOF_po
+
+
+qsub gbR1_%syear%_%smonth%.pbs
+
+# %spart%
+# getjobid=`sbatch gb_%syear%_%smonth%.slurm | awk '{print $4}'`
+# wrfjobid=`sbatch --dependency=afterok:$getjobid R1%syear%%smonth%%sday%.slurm | awk '{print $4}'`
+# %epart%
+# %s1part%
+# wrfjobid=`sbatch  R1%syear%%smonth%%sday%.slurm | awk '{print $4}'`
+# %e1part%
+# sbatch --dependency=afterok:$wrfjobid po_%syear%_%smonth%_%sday%.slurm

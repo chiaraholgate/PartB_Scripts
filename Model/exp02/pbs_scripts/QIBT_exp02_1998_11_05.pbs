@@ -1,0 +1,16 @@
+#!/bin/bash
+#PBS -P w28
+#PBS -q normalbw
+#PBS -l ncpus=28
+#PBS -l mem=128GB
+#PBS -l walltime=8:00:00
+#PBS -l wd
+#PBS -l jobfs=500MB
+
+ulimit -s unlimited
+export OMP_NUM_THREADS=28
+export DIROUT=/g/data/xc0/user/Holgate/QIBT/exp02
+
+./QIBT_exp02 05 11 1998 06 11 1998 $PBS_JOBFS/
+
+cp $PBS_JOBFS/* $DIROUT

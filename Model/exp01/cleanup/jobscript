@@ -1,0 +1,23 @@
+#!/bin/bash
+#PBS -P xc0
+#PBS -q express
+#PBS -l walltime=05:00:00
+#PBS -l mem=224GB
+#PBS -l jobfs=1GB
+#PBS -l ncpus=112
+## For licensed software, you have to specify it to get the job running. For unlicensed software, you should also specify it to help us analyse the software usage on our system.
+##PBS -l software=my_program
+## The job will be executed from current working directory instead of home.
+#PBS -l wd 
+  
+ulimit -s unlimited
+module load openmpi/1.10.2
+module load netcdf
+export OMP_NUM_THREADS=16
+export MPI_RANKS=$(( PBS_NCPUS / OMP_NUM_THREADS ))
+##mpirun -n 2  -cpus-per-proc 8 ./QIBT_exp01 > raijin_1979_2013.txt
+#mpirun -n 4  --map-by slot:PE=8 ./QIBT_exp01 > raijin_1979_2013.txt
+#mpirun -n ${MPI_RANKS} --map-by slot:PE=${OMP_NUM_THREADS} ./QIBT_exp01 > raijin_1979_2013.txt
+#mpirun -n ${MPI_RANKS} --map-by slot:PE=${OMP_NUM_THREADS} ./QIBT_simple_mpi_TestA > raijin_1979_2013_TestA.txt
+mpirun -n ${MPI_RANKS} --map-by slot:PE=${OMP_NUM_THREADS} ./QIBT_simple_mpi_TestB > raijin_1979_2013_TestB.txt
+#./QIBT_exp02 > raijin_1979_2013_exp02.txt

@@ -1,0 +1,1 @@
+for file in Decks/1/*; do Decks/1/${file##*/}; done
