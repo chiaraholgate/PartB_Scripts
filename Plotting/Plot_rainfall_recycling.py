@@ -28,7 +28,7 @@ from matplotlib.ticker import FormatStrFormatter
 dir_in = '/srv/ccrc/data19/z3131380/PartB/Output/Australia/100parcels/TS10min/exp01/Processed/'
 dir_out = '/srv/ccrc/data19/z3131380/PartB/Output/Australia/100parcels/TS10min/exp01/Processed/Rainfall_recycling/'
 domain = 'Australia'
-region = 'MDB'
+region = 'Australia'
 timeblock = 'seasonal'
 n_i,n_j = 134,205 # QIBT model dimensions
 fsize = 14
@@ -47,7 +47,7 @@ if region == 'MDB':
 if region == 'SWWA':
     y1 = 75; y2 = 100; y3 = 0; y4 = 10; y5 = 0; y6 = 100; y7 = 0; y8 = 50; y9 = 0; y10 = 10
     
-dir_out = '/srv/ccrc/data19/z3131380/PartB/Output/Australia/100parcels/TS10min/exp01/Processed/Rainfall_recycling/'     
+#dir_out = '/srv/ccrc/data19/z3131380/PartB/Output/Australia/100parcels/TS10min/exp01/Processed/Rainfall_recycling/'     
 
 
 #==============================================================================
@@ -334,10 +334,10 @@ elif timeblock == 'seasonal':
     #==============================================================================
     fig, ax1 = plt.subplots(figsize=(16,11.7))        
     ax1 = plt.subplot2grid((6, 1), (0, 0), rowspan=2)
-    p1, = ax1.plot(df['Year'],df['P_anom'],'-ko', label="Rainfall anomaly [%]",markersize=4,linewidth=1)
+    p1, = ax1.plot(df['Year'],df['P_anom'],'-k', label="Rainfall anomaly [%]",markersize=4,linewidth=1.5)
     # NOTE: the annual time series has been moved to show its values in the MIDDLE of each year. This differs
     # from the purely annual plots, with show values at the START of each year. Careful when analysing.
-    p2, = ax1.plot(df2['Year']+0.5,df2['P_anom'],':o', label="Rainfall anomaly [%]",markersize=4,linewidth=2,color='gray')
+    #p2, = ax1.plot(df2['Year']+0.5,df2['P_anom'],':', label="Rainfall anomaly [%]",markersize=4,linewidth=2,color='gray')
     ax1.grid(axis='x')
     ax1.axhline(0,color='gray',linestyle=':')
     ax1.tick_params(labelbottom=False) 
@@ -346,8 +346,8 @@ elif timeblock == 'seasonal':
     plt.annotate('All seasons',xy=(1980,0.8),xycoords='data',fontsize=fsize)
     ax1a = ax1.twinx()
     ax1b = ax1.twinx()
-    p1a, = ax1a.plot(df['Year'],df['outregion_ocean_pct'],'-bo', label="Ocean water vapour contribution [%]",markersize=4,alpha=0.5)
-    p1b, = ax1b.plot(df['Year'],df['RR'],'-go', label="Land water vapour contribution [%]",markersize=4,alpha=0.5)
+    p1a, = ax1a.plot(df['Year'],df['outregion_ocean_pct'],'-bo', label="Ocean water vapour contribution [%]",markersize=4)#,alpha=0.5)
+    p1b, = ax1b.plot(df['Year'],df['RR'],'-go', label="Land water vapour contribution [%]",markersize=4)#,alpha=0.5)
     ax1a.spines["right"].set_position(("axes", 1.01))
     ax1b.spines["right"].set_position(("axes", 1.07))
     make_patch_spines_invisible(ax1a)
@@ -481,7 +481,7 @@ elif timeblock == 'seasonal':
     ax1a = ax1.twinx()
     ax1b = ax1.twinx()
     p1a, = ax1a.plot(df['Year'],df['outregion_ocean_mm']/1000,'-bo', label="Ocean water vapour contribution [m]",markersize=4,alpha=0.5)
-    p1b, = ax1b.plot(df['Year'],df['outregion_land_Aus_mm']/1000,'-go', label="Land water vapour contribution [m]",markersize=4,alpha=0.5)
+    p1b, = ax1b.plot(df['Year'],df['region_land_mm']/1000,'-go', label="Land water vapour contribution [m]",markersize=4,alpha=0.5)
     ax1a.spines["right"].set_position(("axes", 1.01))
     ax1b.spines["right"].set_position(("axes", 1.07))
     make_patch_spines_invisible(ax1a)
@@ -505,7 +505,7 @@ elif timeblock == 'seasonal':
     ax2a = ax2.twinx()
     ax2b = ax2.twinx()
     p3a, = ax2a.plot(groups.get_group('DJF')['Year'],groups.get_group('DJF')['outregion_ocean_mm']/1000,'-bo', label="Ocean water vapour contribution [m]",markersize=4)
-    p3b, = ax2b.plot(groups.get_group('DJF')['Year'],groups.get_group('DJF')['outregion_land_Aus_mm']/1000,'-go', label="Land water vapour contribution [m]",markersize=4)
+    p3b, = ax2b.plot(groups.get_group('DJF')['Year'],groups.get_group('DJF')['region_land_mm']/1000,'-go', label="Land water vapour contribution [m]",markersize=4)
     ax2a.spines["right"].set_position(("axes", 1.01))
     ax2b.spines["right"].set_position(("axes", 1.07))
     make_patch_spines_invisible(ax2a)
@@ -527,7 +527,7 @@ elif timeblock == 'seasonal':
     ax3a = ax3.twinx()
     ax3b = ax3.twinx()
     p4a, = ax3a.plot(groups.get_group('MAM')['Year'],groups.get_group('MAM')['outregion_ocean_mm']/1000,'-bo', label="Ocean water vapour contribution [m]",markersize=4)
-    p4b, = ax3b.plot(groups.get_group('MAM')['Year'],groups.get_group('MAM')['outregion_land_Aus_mm']/1000,'-go', label="Land water vapour contribution [m]",markersize=4)
+    p4b, = ax3b.plot(groups.get_group('MAM')['Year'],groups.get_group('MAM')['region_land_mm']/1000,'-go', label="Land water vapour contribution [m]",markersize=4)
     ax3a.spines["right"].set_position(("axes", 1.01))
     ax3b.spines["right"].set_position(("axes", 1.07))
     make_patch_spines_invisible(ax3a)
@@ -549,7 +549,7 @@ elif timeblock == 'seasonal':
     ax4a = ax4.twinx()
     ax4b = ax4.twinx()
     p5a, = ax4a.plot(groups.get_group('JJA')['Year'],groups.get_group('JJA')['outregion_ocean_mm']/1000,'-bo', label="Ocean water vapour contribution [m]",markersize=4)
-    p5b, = ax4b.plot(groups.get_group('JJA')['Year'],groups.get_group('JJA')['outregion_land_Aus_mm']/1000,'-go', label="Land water vapour contribution [m]",markersize=4)
+    p5b, = ax4b.plot(groups.get_group('JJA')['Year'],groups.get_group('JJA')['region_land_mm']/1000,'-go', label="Land water vapour contribution [m]",markersize=4)
     ax4a.spines["right"].set_position(("axes", 1.01))
     ax4b.spines["right"].set_position(("axes", 1.07))
     make_patch_spines_invisible(ax4a)
@@ -578,7 +578,7 @@ elif timeblock == 'seasonal':
     ax5a = ax5.twinx()
     ax5b = ax5.twinx()
     p6a, = ax5a.plot(groups.get_group('SON')['Year'],groups.get_group('SON')['outregion_ocean_mm']/1000,'-bo', label="Ocean water vapour contribution [m]",markersize=4)
-    p6b, = ax5b.plot(groups.get_group('SON')['Year'],groups.get_group('SON')['outregion_land_Aus_mm']/1000,'-go', label="Land water vapour contribution [m]",markersize=4)
+    p6b, = ax5b.plot(groups.get_group('SON')['Year'],groups.get_group('SON')['region_land_mm']/1000,'-go', label="Land water vapour contribution [m]",markersize=4)
     ax5a.spines["right"].set_position(("axes", 1.01))
     ax5b.spines["right"].set_position(("axes", 1.07))
     make_patch_spines_invisible(ax5a)

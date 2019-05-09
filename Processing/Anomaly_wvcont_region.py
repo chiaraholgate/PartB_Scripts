@@ -32,11 +32,11 @@ n_i,n_j = 134,205 # QIBT model dimensions
 # Anomaly periods
 #==============================================================================
 if anom_period == 'MD': # Millenium drought + some wet years
-    Yearlist = np.array([2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011])
+    Yearlist = np.array([1999,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011])
 elif anom_period == 'LN': # Big La Nina years
     Yearlist = np.array([1989,1999,2000,2008,2009,2010,2011])
 elif anom_period == 'EN': # Big El Nino years 
-    Yearlist = np.array([1982,1987,1994,1998])
+    Yearlist = np.array([1982,1987,1994,1998,2002])
 
 #==============================================================================
 # Load climatology

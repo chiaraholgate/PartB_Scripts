@@ -174,6 +174,8 @@ if os.path.isfile(file) == True:
     longicrs = fh.variables['longicrs'][:]  
     fh.close() 
 
+# Water vapour depth deviation
+
 # mm    
 if region=='Australia':
     levs = [-40,-30,-20,-10,0,10,20,30,40]
@@ -223,8 +225,10 @@ fig.savefig(dir_in+region+'_'+anom_period_name+'_wvcont_seasonal_departure_mm.pn
 plt.close()        
 
 
-# pct    
-levs = [-0.1,-0.05,-0.025,-0.01,-0.005,0,0.005,0.01,0.025,0.05,0.1]
+# Water vapour percent deviation
+   
+#levs = [-0.1,-0.05,-0.025,-0.01,-0.005,0,0.005,0.01,0.025,0.05,0.1]
+levs = [-0.02,-0.015,-0.01,-0.005,-0.0025,0,0.0025,0.005,0.01,0.015,0.02]
 cMap = plt.get_cmap('RdYlBu',len(levs))
 cmaplist = [cMap(i) for i in range(cMap.N)]
 cmaplist[4] = (0.9,0.9,0.9,1)
@@ -235,7 +239,7 @@ norm = BoundaryNorm(levs, ncolors=cMap.N, clip=True)
 plt.clf()    
 fig = plt.figure(figsize=(8.27,11.7)) # A4, portrait=8.27,11.7, else 16,11.7     
 for yr in yrlist:
-    ax = fig.add_subplot(11,4,yrlist.index(yr)+1)
+    ax = fig.add_subplot(13,4,yrlist.index(yr)+1)
     if yrlist.index(yr)==0:
         ax.set_title('DJF',fontsize=fsize)
         plt.ylabel(str(int(yr)),rotation=90)
@@ -266,3 +270,49 @@ for yr in yrlist:
 #plt.tight_layout()    
 fig.savefig(dir_in+region+'_'+anom_period_name+'_wvcont_seasonal_departure_pct.png',bbox_inches='tight') 
 plt.close()        
+
+
+# Precipitation depth deviation
+
+levs = [-500,-300,-100,-50,0,50,100,300,500]
+cMap = plt.get_cmap('RdYlBu',len(levs))
+cmaplist = [cMap(i) for i in range(cMap.N)]
+cmaplist[3] = (0.9,0.9,0.9,1)
+cmaplist[4] = (0.9,0.9,0.9,1)
+cMap = cMap.from_list('Custom cmap', cmaplist, cMap.N)
+norm = BoundaryNorm(levs, ncolors=cMap.N, clip=True)
+    
+plt.clf()    
+fig = plt.figure(figsize=(8.27,11.7)) # A4, portrait=8.27,11.7, else 16,11.7     
+for yr in yrlist:
+    ax = fig.add_subplot(13,4,yrlist.index(yr)+1)
+    if yrlist.index(yr)==0:
+        ax.set_title('DJF',fontsize=fsize)
+        plt.ylabel(str(int(yr)),rotation=90)
+    elif yrlist.index(yr)==1:
+        ax.set_title('MAM',fontsize=fsize)
+    elif yrlist.index(yr)==2:
+        ax.set_title('JJA',fontsize=fsize)
+    elif yrlist.index(yr)==3:
+        ax.set_title('SON',fontsize=fsize)
+    elif math.modf(yr)[0]==0:
+        plt.ylabel(str(int(yr)),rotation=90)
+
+    m = Basemap(projection='stere',lon_0=135,lat_0=-25.,\
+                    llcrnrlat=-45,urcrnrlat=0,\
+                    llcrnrlon=85,urcrnrlon=175,\
+                    resolution='l',area_thresh=10000)
+    x, y = m(longicrs,latitcrs) #m(XLONG[5:-5,5:-5],XLAT[5:-5,5:-5]) 
+    m.drawcoastlines()
+    h=m.pcolormesh(x,y,pre_seasonal_departure[yrlist.index(yr),:,:],norm=norm,cmap=cMap)
+    
+    # Add wind vectors - NOTE THAT THESE MAY NEED TO BE ROTATED. CHECK PY DOCS    
+    
+    
+    cax = plt.axes([0.125,0.08,0.78,0.015])
+    cbar = plt.colorbar(h,cax=cax,ticks=levs,orientation='horizontal',boundaries=levs,extend='both')#,spacing='proportional')
+    cbar.set_label(label='Seasonal departure from climatological '+region+' precipitation [mm]')#,size=fsize)
+    #cbar.ax.tick_params(labelsize=16)
+#plt.tight_layout()    
+fig.savefig(dir_in+region+'_'+anom_period_name+'_precip_seasonal_departure_mm.png',bbox_inches='tight') 
+plt.close()   

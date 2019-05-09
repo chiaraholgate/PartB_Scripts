@@ -15,7 +15,7 @@ fsize=18
 
 dir_in = '/srv/ccrc/data19/z3131380/PartB/Output/'
 domain = 'Australia'
-region = 'SWWA'
+region = 'Australia'
 
 #==============================================================================
 # Plot contributions as percent total annual rainfall over the domain
@@ -143,7 +143,8 @@ import pandas as pd
 Yearlist = pd.date_range('1979','2013',freq='AS').year
 
 if region == 'Australia':
-    levs = [0,10,20,30,40,50,100,150,200,250,300,500]
+    #levs = [0,10,20,30,40,50,100,150,200,250,300,500]
+    levs =  [0,0.0025,0.005,0.01,0.02,0.03,0.04,0.05,0.06] 
 else:
     levs = [0,20,40,60,80,100,200]  
 cMap = plt.get_cmap('RdYlBu_r',len(levs))
@@ -154,7 +155,7 @@ norm = BoundaryNorm(levs, ncolors=cMap.N, clip=True)
 fig = plt.figure(figsize=(18,16.5)) # A4, portrait=8.27,11.7, else 16,11.7
 for year in range(len(Yearlist)):
     fname = region+'_'+str(Yearlist[year])+'_wvcont.nc'
-    file = dir_in+domain+'/100parcels/TS10min/Processed/Yearly/'+fname
+    file = dir_in+domain+'/100parcels/TS10min/exp01/Processed/Yearly/'+fname
     if os.path.isfile(file) == True:
         fh = Dataset(file, mode='r') 
         latitcrs = fh.variables['latitcrs'][:]
@@ -165,6 +166,8 @@ for year in range(len(Yearlist)):
         fh.close()      
         #else: print 'File for '+Yearlist[year]+' does not exist'
         pre_cells = np.ma.array(pre,mask=np.isnan(pre))
+        
+        wv_cont_sum_yearly_pct = wv_cont_sum_yearly_mm/np.nansum(pre)
         
         ax = fig.add_subplot(7,5,year+1)
         ax.set_title(Yearlist[year],fontsize=14)
@@ -180,12 +183,12 @@ for year in range(len(Yearlist)):
         m.drawcoastlines()
     #    m.drawmeridians(np.arange(-180,180,10),labels=[0,0,1,0],fontsize=fsize)
     #    m.drawparallels(np.arange(-90,90,5),labels=[1,0,0,0],fontsize=fsize)
-        h=m.pcolormesh(x,y,wv_cont_sum_yearly_mm,norm=norm,cmap=cMap)
+        h=m.pcolormesh(x,y,wv_cont_sum_yearly_pct,norm=norm,cmap=cMap)
     #    i=m.contour(x,y,np.nansum(pre,axis=0),linewidths=1.9,cmap=plt.cm.jet_r)#,colors='gray'
     #    #plt.clabel(i,fontsize=9,inline=1)
 cax = plt.axes([0.05,-0.015,0.9,0.02])
 cbar = plt.colorbar(h,cax=cax,ticks=levs,orientation='horizontal',boundaries=levs,extend='max')#,spacing='proportional')
-cbar.set_label(label='Water Vapour Contribution [mm]',size=fsize)
+cbar.set_label(label='Water Vapour Contribution [%]',size=fsize)
 cbar.ax.tick_params(labelsize=16)
 ##cax2 = plt.axes([0.99,0.2,0.02,0.6])
 #cax2 = plt.axes([0.05,-0.09,0.9,0.02])
@@ -196,5 +199,5 @@ cbar.ax.tick_params(labelsize=16)
 #cbar2.ax.tick_params(labelsize=16)
 plt.tight_layout()
 fig.subplots_adjust(wspace=0)#, hspace=0)
-fig.savefig(dir_in+domain+'/100parcels/TS10min/Processed/Yearly/Plots/'+region+'_exp01_wvcont_mm_1979-2013.png',bbox_inches='tight') #automate this line
+fig.savefig(dir_in+domain+'/100parcels/TS10min/exp01/Processed/Yearly/Plots/'+region+'_exp01_wvcont_pct_1979-2013.png',bbox_inches='tight') #automate this line
 plt.close()

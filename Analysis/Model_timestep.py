@@ -5,7 +5,7 @@ Created on Wed Sep 27 09:42:03 2017
 
 This script 
 
-(1) loads the maximum U and V wind components calculated from all
+(1) loads the maximum U and V wind components, in lower 22 model levels, calculated from all
 NARCliM output files over 1979-2013 in: 
     /home/z3131380/hdrive/PhD/PartB/Scripts/NARCliM_max_winds.sh
 
@@ -29,10 +29,10 @@ U_vals = []; V_vals = [];
 for year in np.arange(1979,2013):
     for month in np.arange(1,13):
         m = '%02d' % month
-        file = fdir+'wrfout_d01_'+str(year)+'-'+m+'_UV_max.nc'
+        file = fdir+'wrfout_d01_'+str(year)+'-'+m+'_UV_max_L0-22.nc'
         fh = Dataset(file, mode='r')
-        U = fh.variables['U'][:]
-        V = fh.variables['V'][:]
+        U = fh.variables['U'][0,:,:]
+        V = fh.variables['V'][0,:,:]
         fh.close()  
         U_vals = np.append(U_vals,U)
         V_vals = np.append(V_vals,V)

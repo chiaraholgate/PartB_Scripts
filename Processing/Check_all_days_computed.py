@@ -36,13 +36,13 @@ Start_date = '19790131' ; Start_year = Start_date[0:4] ; Start_month = Start_dat
 End_date = '20131231' ; End_year = End_date[0:4] ; End_month = End_date[4:6]; End_day = End_date[6:8]
 daylist = pd.date_range(Start_date,End_date,freq='d') 
 #dirname = '/srv/ccrc/data19/z3131380/PartB/Output/Australia/100parcels/TS10min/exp01/'
-dirname = '/g/data/xc0/user/Holgate/QIBT/exp02/'
+dirname = '/g/data/xc0/user/Holgate/QIBT/exp03/'
 
-exp01_results=pd.read_fwf('/home/603/cxh603/PhD/PartB/Scripts/Processing/exp01_results_list.txt')
-exp01_results.columns = ['Permissions','No.','ID','Place','Filesize','Mon','Day','Year','Name']
-
-exp02_results=pd.read_fwf('/g/data/xc0/user/Holgate/QIBT/exp02/exp02_results_list.txt')
-exp02_results.columns = ['Permissions','No.','ID','Place','Filesize','Mon','Day','Year','Name']
+#exp01_results=pd.read_fwf('/home/603/cxh603/PhD/PartB/Scripts/Processing/exp01_results_list.txt')
+#exp01_results.columns = ['Permissions','No.','ID','Place','Filesize','Mon','Day','Year','Name']
+#
+#exp02_results=pd.read_fwf('/g/data/xc0/user/Holgate/QIBT/exp02/exp02_results_list.txt')
+#exp02_results.columns = ['Permissions','No.','ID','Place','Filesize','Mon','Day','Year','Name']
 
 df = pd.DataFrame()  
 for i in range(len(daylist)):
@@ -53,9 +53,9 @@ for i in range(len(daylist)):
     file = dirname+fname
     if os.path.isfile(file) == False:
         df = df.append(pd.DataFrame({'Day':[fname]}))
-    elif exp02_results.iloc[np.where(fname==exp02_results['Name'].values)[0][0]]['Filesize'] != exp01_results.iloc[np.where(fname==exp01_results['Name'].values)[0][0]]['Filesize']:
-        df = df.append(pd.DataFrame({'Day':[fname]}))
-outname = dirname+'QIBT_exp02_incomplete_days.txt'        
+#    elif exp02_results.iloc[np.where(fname==exp02_results['Name'].values)[0][0]]['Filesize'] != exp01_results.iloc[np.where(fname==exp01_results['Name'].values)[0][0]]['Filesize']:
+#        df = df.append(pd.DataFrame({'Day':[fname]}))
+outname = dirname+'QIBT_exp03_incomplete_days.txt'        
 df.to_csv(outname)              
 # (5) Copy the outfile to /home/z3131380/hdrive/PhD/PartB/Scripts/Model
 # (6) Create .pbs scripts for incomplete days list in outfile.

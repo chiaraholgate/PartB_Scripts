@@ -36,11 +36,12 @@ from shapely.geometry import Point
 from shapely.geometry.polygon import Polygon
 
 # Mask type
-grid = 'WATERDYN_050deg_grid'
+#grid = 'WATERDYN_050deg_grid'
+grid = 'QIBT_grid'
 
 
 dir_in = r'/srv/ccrc/data03/z3131380/PartB/Masks/Aus_Drainage_Divisions/geofabric/Divisions/Single/'
-dir_out = r'/srv/ccrc/data03/z3131380/PartB/Masks/Aus_Drainage_Divisions/geofabric/Divisions/netcdf/'+grid+'/'
+dir_out = r'/srv/ccrc/data03/z3131380/PartB/Masks/Aus_Drainage_Divisions/geofabric/Divisions/netcdf/'+grid+'/test/'
 
 # Get lons,lats from first model output file
 if grid == 'QIBT_grid':    
@@ -61,8 +62,7 @@ divisions = [i for i in shp_list if i.endswith('.shp')]
 
 for d in divisions:
     basin = d[:-4]
-    print basin
-    
+        
     # Read in division shapefile 
     shp = shapefile.Reader(dir_in+d)    
     all_shapes = shp.shapes() # get all the polygons
@@ -140,7 +140,7 @@ for d in divisions:
             of['wsmask'].long_name = 'Australian drainage division mask, WATERDYN_050deg_grid'
             of['wsmask'][:] = wsmask    
 
-
+    print basin
 # Attempted alternatives...
 #shp = shapefile.Reader(dir_in+d)
 

@@ -22,8 +22,8 @@
 
 # (2) Run the decks from /home/603/cxh603/PhD/PartB/Scripts/Model/exp03
 # e.g. cd /home/603/cxh603/PhD/PartB/Scripts/Model/exp03
-#      for file in pbs_scripts/Decks/Spring/*20*; do 
-#		./pbs_scripts/Decks/Spring/${file##*/}
+#      for file in pbs_scripts/Decks/Summer/*1979*; do 
+#		./pbs_scripts/Decks/Summer/${file##*/}
 #		done
 
 #===========

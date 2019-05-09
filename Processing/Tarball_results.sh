@@ -9,10 +9,10 @@
 ## I note that it's probably better to initally move each file directly into an archive folder, instead of creating a subdirectory of year first. This is my first attempt and I'm being conservative... Next time...
 
 
-results_dir=/g/data/xc0/user/Holgate/QIBT/exp02/
+results_dir=/g/data/xc0/user/Holgate/QIBT/exp03/
 
 
-for year in {1980..2013};do
+for year in {1979..2013};do
 mkdir $year
 for ff in bt.${year}*.nc;do 
 mv $ff ${year}/

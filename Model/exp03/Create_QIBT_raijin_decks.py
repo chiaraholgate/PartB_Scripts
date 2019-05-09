@@ -13,7 +13,7 @@ import numpy as np
 #==============================================================================
 proj = 'w28'
 results_dir = '/g/data/xc0/user/Holgate/QIBT/exp03'
-jobfs = 500 # MB
+jobfs = 3000 # MB
 queue = 'normalbw'
 
 if queue == 'normal':
@@ -47,7 +47,7 @@ for w in np.arange(0,len(weeklist)-1):
     startday = weeklist[w].day; endday = weeklist[w+1].day
     startmonth = weeklist[w].month; endmonth = weeklist[w+1].month
     startyear = weeklist[w].year; endyear = weeklist[w+1].year   
-    print w,startday,startmonth,startyear
+    #print w,startday,startmonth,startyear
 
     #open the sample deck 
     fin = open (indeck,"r") 
@@ -55,16 +55,20 @@ for w in np.arange(0,len(weeklist)-1):
     #open the deck I am creating
     if startmonth==12 or startmonth==1 or startmonth==2:
         fout = open (deck_dir+"/Summer/QIBT_exp03_%s_%s_%s.deck"%(str(startyear),str(startmonth),str(startday)),"w")
-        wallhours = 48
-    if startmonth==3 or startmonth==4 or startmonth==5:    
-        fout = open (deck_dir+"/Autumn/QIBT_exp03_%s_%s_%s.deck"%(str(startyear),str(startmonth),str(startday)),"w")
-        wallhours = 48
-    if startmonth==6 or startmonth==7 or startmonth==8:  
-        fout = open (deck_dir+"/Winter/QIBT_exp03_%s_%s_%s.deck"%(str(startyear),str(startmonth),str(startday)),"w")
         wallhours = 24
+    if startmonth==3 or startmonth==4 or startmonth==5:    
+#        fout = open (deck_dir+"/Autumn/QIBT_exp03_%s_%s_%s.deck"%(str(startyear),str(startmonth),str(startday)),"w")
+#        wallhours = 12
+        continue
+    if startmonth==6 or startmonth==7 or startmonth==8:  
+#        fout = open (deck_dir+"/Winter/QIBT_exp03_%s_%s_%s.deck"%(str(startyear),str(startmonth),str(startday)),"w")
+#        wallhours = 6
+        continue
     if startmonth==9 or startmonth==10 or startmonth==11:   
-        fout = open (deck_dir+"/Spring/QIBT_exp03_%s_%s_%s.deck"%(str(startyear),str(startmonth),str(startday)),"w")
-        wallhours = 36
+#        fout = open (deck_dir+"/Spring/QIBT_exp03_%s_%s_%s.deck"%(str(startyear),str(startmonth),str(startday)),"w")
+#        wallhours = 12
+        continue
+
     
     #Loop over the lines of the input file
     for lines in fin.readlines():
