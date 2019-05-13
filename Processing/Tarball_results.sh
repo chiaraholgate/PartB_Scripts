@@ -21,3 +21,10 @@ tar -cf ${year}.tar ${year}/
 gzip ${year}.tar
 echo ${year}
 done
+
+# Tarball results on storm servers
+for ff in bt.*.nc;do 
+mv $ff Raw/
+done
+tar -czf Raw.tar.gz Raw/
+
