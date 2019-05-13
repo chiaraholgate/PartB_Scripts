@@ -28,9 +28,10 @@
 
 # (2) Run the decks from /home/603/cxh603/PhD/PartB/Scripts/Model/exp04
 # e.g. cd /home/603/cxh603/PhD/PartB/Scripts/Model/exp04
-#      for file in pbs_scripts/Decks/Summer/*198*; do 
-#		./pbs_scripts/Decks/Summer/${file##*/}
+#      for file in pbs_scripts/Decks/Spring/*1979*; do 
+#		./pbs_scripts/Decks/Spring/${file##*/}
 #		done
+#     for file in pbs_scripts/Decks/Summer/*198*; do ./pbs_scripts/Decks/Summer/${file##*/}; done
 
 #===========
 cat > ./pbs_scripts/QIBT_exp04_%syear%_%smon%_%sday%.pbs << EOF_QIBT_exp04
