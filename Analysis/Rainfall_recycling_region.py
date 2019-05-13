@@ -5,16 +5,14 @@ Created on Fri Nov 23 10:03:54 2018
 This script computes the rainfall recycling ratio for a specified region based on back-trajectory model output.
 It outputs the rainfall recycling and ocean vapour contribution per time as .csv files.
 
-Calulations are made on an annual, seasonal and daily basis. 
+Calulations are made on an annual, seasonal and daily basis. Daily currently unused.
 
 Checked and OK 17/1/19, 10/4/19.
 
-**NOTE:
-- Script assumes yearly compressed raw results are present in directory.
 
 @author: z3131380
 """
-
+import sys
 import numpy as np
 from netCDF4 import Dataset 
 import pandas
@@ -23,15 +21,15 @@ import os.path
 #==============================================================================
 # Definitions
 #==============================================================================
-dir_in = '/srv/ccrc/data19/z3131380/PartB/Output/Australia/100parcels/TS10min/exp01/Processed/Yearly/'
-dir_out = '/srv/ccrc/data19/z3131380/PartB/Output/Australia/100parcels/TS10min/exp01/Processed/Rainfall_recycling/'
+dir_in = '/srv/ccrc/data19/z3131380/PartB/Output/Australia/100parcels/TS10min/exp04/Processed/Yearly/'
+dir_out = '/srv/ccrc/data19/z3131380/PartB/Output/Australia/100parcels/TS10min/exp04/Processed/Rainfall_recycling/'
 
-timeblock = 'seasonal'
+timeblock = sys.argv[1]
 
-regions = ['CarpentariaCoast','LakeEyreBasin','NorthEastCoast','NorthWesternPlateau','MurrayDarlingBasin',\
-                'SouthWestCoast','PilbaraGascoyne','SouthAustralianGulf','SouthEastCoastNSW','SouthEastCoastVictoria',\
-                'SouthWesternPlateau','TanamiTimorSeaCoast','Tasmania']
-#regions = ['Australia']
+regions = ['Australia','SouthWesternPlateau','TanamiTimorSeaCoast','Tasmania', 'MurrayDarlingBasin',\
+                 'SouthWestCoast', 'SouthEastCoastVIC','CarpentariaCoast','LakeEyreBasin',\
+                 'NorthEastCoast','NorthWesternPlateau','PilbaraGascoyne','SouthAustralianGulf',\
+                 'SouthEastCoastNSW']
                 
 n_i,n_j = 134,205 # QIBT model dimensions
 wvcont_mm_threshold = 5 #mm
@@ -84,24 +82,7 @@ for region in regions:
         outregion_land_Aus=np.ma.array(wsmask_1,mask=wsmask_Aus==0) 
         del wsmask_1           
 
-## Check masks are correct
-#import matplotlib.pyplot as plt
-#from mpl_toolkits.basemap import Basemap
-#file = '/srv/ccrc/data19/z3131380/PartB/Output/Australia/100parcels/TS10min/Processed/Climatology/MDB_1979-2013_climatology.nc'
-#fh = Dataset(file, mode='r') # Get lat,lon data
-#latitcrs = fh.variables['latitcrs'][:]
-#longicrs = fh.variables['longicrs'][:]
-#fh.close()    
-#
-#fig = plt.figure()
-#m = Basemap(projection='stere',lon_0=135,lat_0=-25.,\
-#                    llcrnrlat=-45,urcrnrlat=0,\
-#                    llcrnrlon=85,urcrnrlon=175,\
-#                    resolution='l',area_thresh=10000)
-#x, y = m(longicrs,latitcrs) 
-#m.drawcoastlines()
-#i=m.pcolormesh(x,y,outregion_land_Aus)
-    
+   
     if timeblock == 'annual':
         #==============================================================================
         # Vapour contributions and rainfall recycling by year
