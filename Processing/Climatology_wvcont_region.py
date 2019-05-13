@@ -2,8 +2,8 @@
 """
 Created on Mon Oct 29 09:16:39 2018
 
-This script calculates the mean seasonal and mean annual QIBT modelled water vapour contribution and precipitation.
-It also calculates the April to November (southern wet season) climatology.
+This script calculates the mean seasonal and mean annual QIBT modelled water vapour contribution and 
+precipitation. It also calculates the April to November (southern wet season) climatology.
 
 1979 is not used in the climatology for summer, as the model results begin at 31/1/79, so there's no data
 for Dec 1978 or Jan 1979. Other seasons include data from 1979.
@@ -21,16 +21,15 @@ from netCDF4 import Dataset
 #==============================================================================
 # Definitions
 #==============================================================================
-dir_data = r'/srv/ccrc/data19/z3131380/PartB/Output/Australia/100parcels/TS10min/exp01/Processed/Yearly/'
-dir_out = r'/srv/ccrc/data19/z3131380/PartB/Output/Australia/100parcels/TS10min/exp01/Processed/Climatology/'
+dir_data = r'/srv/ccrc/data19/z3131380/PartB/Output/Australia/100parcels/TS10min/exp04/Processed/Yearly/'
+dir_out = r'/srv/ccrc/data19/z3131380/PartB/Output/Australia/100parcels/TS10min/exp04/Processed/Climatology/'
 
 n_i,n_j = 134,205 # QIBT model dimensions
 
-regions = ['Tasmania','TanamiTimorSeaCoast','SouthWesternPlateau']
-                #'SouthEastCoastNSW','SouthAustralianGulf','PilbaraGascoyne','NorthWesternPlateau','CarpentariaCoast','LakeEyreBasin','NorthEastCoast',
-                #'PilbaraGascoyne','SouthAustralianGulf','SouthEastCoastNSW',\
-                #'SouthWesternPlateau','TanamiTimorSeaCoast','SouthEastCoastVictoria']
-                # Already done: 'Australia','MurrayDarlingBasin','SouthWestCoast',
+regions = ['Australia','SouthWesternPlateau','TanamiTimorSeaCoast','Tasmania', 'MurrayDarlingBasin',\
+                 'SouthWestCoast', 'SouthEastCoastVIC','CarpentariaCoast','LakeEyreBasin',\
+                 'NorthEastCoast','NorthWesternPlateau','PilbaraGascoyne','SouthAustralianGulf',\
+                 'SouthEastCoastNSW']
                 
 #==============================================================================
 # Dates
