@@ -113,7 +113,7 @@ CHARACTER(LEN=50), PARAMETER :: fwshed = "NARCliM_AUS_land_sea_mask.nc"
 
 REAL, PARAMETER :: min_del_q = 0.0001    !the minimum change in parcel mixing ratio (kg/kg) to be considered "real"
 
-LOGICAL, PARAMETER :: eachParcel = .TRUE.   !output the data along the trajectory of each parcel
+! LOGICAL, PARAMETER :: eachParcel = .TRUE.   !output the data along the trajectory of each parcel
 !1
 !****************************************************
 !
@@ -3005,9 +3005,9 @@ do dd = 1, totdays
 
 
   
-  if (eachParcel) then
-    ALLOCATE(parcel_stats(10,totsteps), STAT = status)
-  end if
+!   if (eachParcel) then
+!     ALLOCATE(parcel_stats(10,totsteps), STAT = status)
+!   end if
 		
   !$OMP DO &
   !$OMP SCHEDULE (DYNAMIC)
@@ -3105,9 +3105,9 @@ do dd = 1, totdays
 	    call parcel_release_height(pw(xx,yy,:,tt),par_lev)
 	    !$OMP END CRITICAL (par_rel_height)
 	
-	    if (print_test) then
-	    !print *,"day,par_lev,xx,yy,tt ",dd,par_lev,xx,yy,tt,threadnum
-	    end if
+! 	    if (print_test) then
+! 	    !print *,"day,par_lev,xx,yy,tt ",dd,par_lev,xx,yy,tt,threadnum
+! 	    end if
 	    
 	    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!	    
 	    !release the parcel and track the back trajectory 
@@ -3149,18 +3149,18 @@ do dd = 1, totdays
 	      !advect the parcel back in time one step
 	      !
 	      
-	      !current parcel stats
-	      if (eachParcel) then
-	        !print *,"nn ",nn,threadnum,par_lev
-	        parcel_stats(1,totsteps-daytsteps+tt+1-nn) = nn*1.
-			parcel_stats(2,totsteps-daytsteps+tt+1-nn) = par_lon
-			parcel_stats(3,totsteps-daytsteps+tt+1-nn) = par_lat
-			parcel_stats(4,totsteps-daytsteps+tt+1-nn) = par_pres
-			parcel_stats(5,totsteps-daytsteps+tt+1-nn) = par_q
-			parcel_stats(6,totsteps-daytsteps+tt+1-nn) = u(x,y,par_lev,ttdata)
-			parcel_stats(7,totsteps-daytsteps+tt+1-nn) = v(x,y,par_lev,ttdata)
-			parcel_stats(8,totsteps-daytsteps+tt+1-nn) = w(x,y,par_lev,ttdata)
-		end if
+! 	      !current parcel stats
+! 	      if (eachParcel) then
+! 	        !print *,"nn ",nn,threadnum,par_lev
+! 	        parcel_stats(1,totsteps-daytsteps+tt+1-nn) = nn*1.
+! 			parcel_stats(2,totsteps-daytsteps+tt+1-nn) = par_lon
+! 			parcel_stats(3,totsteps-daytsteps+tt+1-nn) = par_lat
+! 			parcel_stats(4,totsteps-daytsteps+tt+1-nn) = par_pres
+! 			parcel_stats(5,totsteps-daytsteps+tt+1-nn) = par_q
+! 			parcel_stats(6,totsteps-daytsteps+tt+1-nn) = u(x,y,par_lev,ttdata)
+! 			parcel_stats(7,totsteps-daytsteps+tt+1-nn) = v(x,y,par_lev,ttdata)
+! 			parcel_stats(8,totsteps-daytsteps+tt+1-nn) = w(x,y,par_lev,ttdata)
+! 		end if
 	    
 	      !
 	      !calculate the lower left location for the subsection
@@ -3413,12 +3413,12 @@ do dd = 1, totdays
 	    if (par_lev==0) STOP
 	  
 	  
-	    !if keeping track of each parcel
-	    if (eachParcel) then
-	      !print *,"output",threadnum+10
-	      WRITE(threadnum+10) parcel_stats
-	      CLOSE(threadnum+10)
-	    end if
+! 	    !if keeping track of each parcel
+! 	    if (eachParcel) then
+! 	      !print *,"output",threadnum+10
+! 	      WRITE(threadnum+10) parcel_stats
+! 	      CLOSE(threadnum+10)
+! 	    end if
 	  
 	  end do   !mm loop
 	  
