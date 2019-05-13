@@ -24,12 +24,14 @@ elif queue == 'normalbw':
     lmem = 128 # GB     
 elif queue == 'normalsl':    
     ncpus = 32
-    lmem = 15 # GB...it only ever seems to use 11GB!
+    lmem = 190 # GB..it's good to ask for a little bit less than the available memory at any compute 
+                        #node even when the job is taking the entire node so that the background `root`/system 
+                        #processes can still run with their own designated memory share.
 
 #==============================================================================
 # Dates
 #==============================================================================
-Start_date = '19790201' 
+Start_date = '19800101' 
 End_date = '20131230' 
 
 weeklist = pd.date_range(Start_date,End_date,freq='w')
