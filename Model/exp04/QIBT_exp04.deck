@@ -34,7 +34,7 @@
 #     for file in pbs_scripts/Decks/Summer/*198*; do ./pbs_scripts/Decks/Summer/${file##*/}; done
 
 #===========
-cat > ./pbs_scripts/QIBT_exp04_%syear%_%smon%_%sday%.pbs << EOF_QIBT_exp04
+cat > ./home/603/cxh603/PhD/PartB/Scripts/Model/exp04/pbs_scripts/QIBT_exp04_%syear%_%smon%_%sday%.pbs << EOF_QIBT_exp04
 #!/bin/bash
 #PBS -P %proj%
 #PBS -q %queue%
