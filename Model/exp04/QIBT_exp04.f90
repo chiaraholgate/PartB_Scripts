@@ -3041,11 +3041,11 @@ do dd = 1, totdays
 	!WV_cont_day_apbl = 0.    
 
 	! Do you want to print out statements for debugging etc?
-	if (torec==0) then
-	  print_test = .TRUE.
-	else
-	  print_test = .FALSE.
-	end if
+! 	if (torec==0) then
+! 	  print_test = .TRUE.
+! 	else
+! 	  print_test = .FALSE.
+! 	end if
 
 	!
     ! Determine how many parcels to release today and use precip 
@@ -3293,10 +3293,10 @@ do dd = 1, totdays
 	     
 	     
 	      !saving parcel stats
-	      if (eachParcel) then
-	        parcel_stats(9,totsteps-daytsteps+tt+1-nn) = evap(x,y,ttdata)
-			parcel_stats(10,totsteps-daytsteps+tt+1-nn) = WV_cont(x,y)
-			end if
+! 	      if (eachParcel) then
+! 	        parcel_stats(9,totsteps-daytsteps+tt+1-nn) = evap(x,y,ttdata)
+! 			parcel_stats(10,totsteps-daytsteps+tt+1-nn) = WV_cont(x,y)
+! 			end if
 	      
 	      
 	      !
