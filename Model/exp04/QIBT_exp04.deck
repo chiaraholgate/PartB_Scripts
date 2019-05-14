@@ -34,7 +34,7 @@
 #     for file in pbs_scripts/Decks/Summer/*198*; do ./pbs_scripts/Decks/Summer/${file##*/}; done
 
 #===========
-cat > ./home/603/cxh603/PhD/PartB/Scripts/Model/exp04/pbs_scripts/QIBT_exp04_%syear%_%smon%_%sday%.pbs << EOF_QIBT_exp04
+cat > /home/603/cxh603/PhD/PartB/Scripts/Model/exp04/pbs_scripts/QIBT_exp04_%syear%_%smon%_%sday%.pbs << EOF_QIBT_exp04
 #!/bin/bash
 #PBS -P %proj%
 #PBS -q %queue%
@@ -50,10 +50,10 @@ export DIROUT=%dirout%
 
 cd \$PBS_JOBFS
 
-./home/603/cxh603/PhD/PartB/Scripts/Model/exp04/QIBT_exp04 %sday% %smon% %syear% %edday% %edmon% %edyear% \$PBS_JOBFS/
+/home/603/cxh603/PhD/PartB/Scripts/Model/exp04/QIBT_exp04 %sday% %smon% %syear% %edday% %edmon% %edyear% \$PBS_JOBFS/
 
 cp \$PBS_JOBFS/* \$DIROUT
 
 EOF_QIBT_exp04
 
-qsub ./home/603/cxh603/PhD/PartB/Scripts/Model/exp04/pbs_scripts/QIBT_exp04_%syear%_%smon%_%sday%.pbs
+qsub /home/603/cxh603/PhD/PartB/Scripts/Model/exp04/pbs_scripts/QIBT_exp04_%syear%_%smon%_%sday%.pbs
