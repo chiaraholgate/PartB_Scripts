@@ -26,10 +26,11 @@ dir_out = '/srv/ccrc/data19/z3131380/PartB/Output/Australia/100parcels/TS10min/e
 
 timeblock = sys.argv[1]
 
-regions = ['Australia','SouthWesternPlateau','TanamiTimorSeaCoast','Tasmania', 'MurrayDarlingBasin',\
-                 'SouthWestCoast', 'SouthEastCoastVIC','CarpentariaCoast','LakeEyreBasin',\
-                 'NorthEastCoast','NorthWesternPlateau','PilbaraGascoyne','SouthAustralianGulf',\
-                 'SouthEastCoastNSW']
+#regions = ['Australia','MurrayDarlingBasin','SouthWesternPlateau','TanamiTimorSeaCoast','Tasmania', \
+#                 'SouthWestCoast', 'SouthEastCoastVictoria','CarpentariaCoast','LakeEyreBasin',\
+#                 'NorthEastCoast','NorthWesternPlateau','PilbaraGascoyne','SouthAustralianGulf',\
+#                 'SouthEastCoastNSW']
+regions = ['Australia']
                 
 n_i,n_j = 134,205 # QIBT model dimensions
 wvcont_mm_threshold = 5 #mm
@@ -51,7 +52,8 @@ for i in range(len(Yearlist)):
 #==============================================================================
 # Load region mask
 #==============================================================================
-dir_mask = r'/srv/ccrc/data03/z3131380/PartB/Masks/Aus_Drainage_Divisions/geofabric/Divisions/netcdf/QIBT_grid/'
+#dir_mask = r'/srv/ccrc/data03/z3131380/PartB/Masks/Aus_Drainage_Divisions/geofabric/Divisions/netcdf/QIBT_grid/'
+dir_mask = '/srv/ccrc/data03/z3131380/PartB/Masks/n_s_basin/'
 
 # Get land and ocean outside Australia, as this is applicable regardless of region choice
 fh = Dataset('/srv/ccrc/data03/z3131380/PartB/Masks/NARCliM_AUS_land_sea_mask.nc', mode='r') 
@@ -75,8 +77,10 @@ for region in regions:
         wsmask = np.ma.array(wsmask_in,mask=(wsmask_in==0))
         outregion_land_Aus = np.ma.zeros([n_i,n_j])
     else: 
-        fh = Dataset(dir_mask+region+'.nc', mode='r') 
-        wsmask = fh.variables['wsmask'][:]
+        #fh = Dataset(dir_mask+region+'.nc', mode='r') 
+        #wsmask = fh.variables['wsmask'][:]
+        fh = Dataset(dir_mask+'nbasin_rotpole.nc',mode='r')
+        wsmask = fh.variables['wsmask'][:-10,:-10]
         fh.close()       
         wsmask_1=np.ma.array(wsmask_Aus,mask=wsmask)
         outregion_land_Aus=np.ma.array(wsmask_1,mask=wsmask_Aus==0) 
@@ -152,11 +156,11 @@ for region in regions:
 #            df.iloc[row,14] = (df.iloc[row,1] - df.iloc[row-2,1])/(df.iloc[row,2] - df.iloc[row-2,2])
 #        for row in np.arange(5,len(df)):    
 #            df.iloc[row,15] = (df.iloc[row,1] - df.iloc[row-5,1])/(df.iloc[row,2] - df.iloc[row-5,2]) 
-        outname = dir_out+'/Yearly/'+region+'_annual_rainfall_recycling_1979-2013.csv'
+        outname = dir_out+region+'_annual_rainfall_recycling_1979-2013.csv'
         df.to_csv(outname)      
         
         # Save RR grids to netcdf
-        ofile = dir_out+'/Yearly/'+region+'_1979-2013_RR.nc'    
+        ofile = dir_out+region+'_1979-2013_annual_RR.nc'    
         with Dataset(ofile, 'w') as of: 
             of.createDimension('i_cross', n_i)
             of.createDimension('j_cross', n_j)    
@@ -452,11 +456,11 @@ for region in regions:
         # Change first row values from zero to nan so they don't plot            
         df.iloc[0,0]=np.nan; df.iloc[0,6]=np.nan; df.iloc[0,8]=np.nan; df.iloc[0,10]=np.nan; df.iloc[0,-1]=np.nan
         
-        outname = dir_out+'/Seasonal/'+region+'_seasonal_rainfall_recycling_1979-2013.csv'
+        outname = dir_out+region+'_seasonal_rainfall_recycling_1979-2013.csv'
         df.to_csv(outname)     
         
         # Save RR grids to netcdf
-        ofile = dir_out+'/Seasonal/'+region+'_1979-2013_RR.nc'    
+        ofile = dir_out+region+'_1979-2013_seasonal_RR.nc'    
         with Dataset(ofile, 'w') as of: 
             of.createDimension('i_cross', n_i)
             of.createDimension('j_cross', n_j)    
@@ -482,107 +486,99 @@ for region in regions:
             of['RR'].units = '%'
             of['RR'][:] = RR.filled(fill_value=np.nan) # convert to a non-masked array so netcdf doesn't screw up
 
-#==============================================================================
-# Vapour contributions and rainfall recycling by day
-#==============================================================================
-#for year in Yearlist:
-#    # Load QIBT model results of water vapour contribution, processed by region and year
-#    fname = region+'_'+str(year)+'_wvcont.nc'
-#    file = dir_in+'/Yearly/'+fname
-#    if os.path.isfile(file) == True:
-#        fh = Dataset(file, mode='r') 
-#        latitcrs = fh.variables['latitcrs'][:] # latitudes of curvilinear grid
-#        longicrs = fh.variables['longicrs'][:] # longitude of curvilinear grid
-#        wv_cont_sum_daily_mm = fh.variables['wv_cont_sum_daily_mm'][:] # water vapour contribution of domain cells to each cell where it rained
-#        pre = fh.variables['pre'][:] 
-#        fh.close()    
-#        
-#        Daylist = pandas.date_range(start='1/1/'+str(year),end='31/12/'+str(year),freq='d')
-#        
-#        df = pandas.DataFrame() # Make a new data frame for every year
-#        RR = np.ma.zeros([len(Daylist),n_i,n_j])*np.nan
-#        
-#        for day in Daylist:#range(len(wv_cont_sum_daily_mm)):
-#            date = day.strftime('%Y%m%d')
-#            dd = np.where(Daylist==day)[0][0]
-#
-#            # Cut up processed results by area
-#            wv_cont_region = np.ma.array(wv_cont_sum_daily_mm[dd,:,:],mask=(wsmask==0))
-#            wv_cont_outregion_land_Aus = np.ma.array(wv_cont_sum_daily_mm[dd,:,:],mask=(outregion_land_Aus==0))
-#            wv_cont_outregion_land_outside_Aus = np.ma.array(wv_cont_sum_daily_mm[dd,:,:],mask=(land_outside_Aus==0))
-#            wv_cont_outregion_ocean = np.ma.array(wv_cont_sum_daily_mm[dd,:,:],mask=(ocean_outside_Aus==0))
-#            wv_cont_outregion_ocean_area = np.count_nonzero(np.ma.array(wv_cont_outregion_ocean,\
-#                mask=(wv_cont_outregion_ocean<wvcont_mm_threshold)))*cell_area #[km2]
-#            pre_region = np.ma.array(pre[dd,:,:],mask=(wsmask==0))
-#            P_total = np.nansum(pre_region) 
-#            
-#            # Calculate total water vapour contributions [%] by area
-#            outregion_ocean_cont = round(np.nansum(wv_cont_outregion_ocean)/np.nansum(pre_region),4)*100  
-#            outregion_land_Aus_cont = round(np.nansum(wv_cont_outregion_land_Aus)/np.nansum(pre_region),4)*100  
-#            outregion_land_outside_Aus_cont = round(np.nansum(wv_cont_outregion_land_outside_Aus)/np.nansum(pre_region),4)*100
-#            RR_region = round(np.nansum(wv_cont_region)/np.nansum(pre_region),4)*100  
-#            check_sum = np.nansum([RR_region,outregion_ocean_cont,outregion_land_Aus_cont, outregion_land_outside_Aus_cont])
-#            if P_total > 0:
-#                model_error = (P_total-np.nansum(wv_cont_sum_daily_mm[dd,:,:]))/P_total*100
-#            else: model_error = np.nan
-#        
-#            df = df.append(pandas.DataFrame({'Day':[day],'RR':[RR_region],\
-#            'region_land_mm':[np.nansum(wv_cont_region)],\
-#            'outregion_land_Aus_pct':[outregion_land_Aus_cont],\
-#            'outregion_land_Aus_mm':[np.nansum(wv_cont_outregion_land_Aus)],\
-#            'outregion_land_outside_Aus_pct':[outregion_land_outside_Aus_cont],\
-#            'outregion_land_outside_Aus_mm':[np.nansum(wv_cont_outregion_land_outside_Aus)],\
-#            'outregion_ocean_pct':[outregion_ocean_cont],\
-#            'outregion_ocean_mm':[np.nansum(wv_cont_outregion_ocean)],\
-#            'outregion_ocean_km':[wv_cont_outregion_ocean_area],\
-#            'P_total':[P_total],\
-#            'check_sum_pct':[check_sum],\
-#            'model_error_pct':[model_error]}))#,\
-#            #index=date))
-#            
-#            # Calculate RR in the region
-#            rr = (wv_cont_region/P_total)*100
-#            RR[dd,:,:] =  np.ma.array(rr,mask=rr.mask)
-#    
-#    # Add extra results to data frame
-##    P_mean = df['P_total'].mean()
-##    df['P_anom'] = pandas.Series(df['P_total']*np.nan) # make a blank column
-##    df['P_anom'] = pandas.Series((df['P_total']-P_mean)/P_mean)
-##    # Calc the gradient of RR over different lag times
-##    df['dL/dt_2'] = pandas.Series(df['P_total']*np.nan) # make a blank column
-##    df['dL/dt_5'] = pandas.Series(df['P_total']*np.nan) # make a blank column
-##    for row in np.arange(2,len(df)):
-##        df.iloc[row,14] = (df.iloc[row,1] - df.iloc[row-2,1])/(df.iloc[row,2] - df.iloc[row-2,2])
-##    for row in np.arange(5,len(df)):    
-##        df.iloc[row,15] = (df.iloc[row,1] - df.iloc[row-5,1])/(df.iloc[row,2] - df.iloc[row-5,2]) 
-#    outname = dir_out+'Daily/'+region+'_daily_rainfall_recycling_'+str(year)+'.csv'
-#    df.to_csv(outname)      
-#    
-#    # Save RR grids to netcdf
-#    ofile = dir_out+'Daily/'+region+'_daily_RR_'+str(year)+'.nc'    
-#    with Dataset(ofile, 'w') as of: 
-#        of.createDimension('i_cross', n_i)
-#        of.createDimension('j_cross', n_j)    
-#        of.createDimension('time', len(Daylist))
-#        
-#        of.createVariable('time', 'f4', ('time'))
-#        of['time'].long_name = 'Day'
-#        of['time'].units = 'days'
-#        of['time'][:] = Daylist.strftime('%Y%m%d')
-#    
-#        of.createVariable('latitcrs', 'f4', ('i_cross', 'j_cross'))
-#        of['latitcrs'].long_name = 'LATITUDE (SOUTH NEGATIVE)'
-#        of['latitcrs'].units = 'degrees'
-#        of['latitcrs'][:] = latitcrs
-#        
-#        of.createVariable('longicrs', 'f4', ('i_cross', 'j_cross'))
-#        of['longicrs'].long_name = 'LONGITUDE (WEST NEGATIVE)'
-#        of['longicrs'].units = 'degrees'
-#        of['longicrs'][:] = longicrs
-#        
-#        of.createVariable('RR', 'f4', ('time','i_cross', 'j_cross'))
-#        of['RR'].long_name = 'Ratio of grid cell water vapour contributed to rainfall anywhere in the region to total rainfall in the region'
-#        of['RR'].units = '%'
-#        of['RR'][:] = RR.filled(fill_value=np.nan) # convert to a non-masked array so netcdf doesn't screw up
-#        
-#    print year
+    elif timeblock == 'daily':
+        #==============================================================================
+        # Rainfall recycling by day
+        #==============================================================================
+       
+        for year in Yearlist:
+            start_day = str(year)+'0101' ; end_day = str(year)+'1231'
+            Daylist = pandas.date_range(start_day,end_day,freq='d')  
+            fname = region+'_'+str(year)+'_wvcont.nc'
+            file = dir_in+fname
+            if os.path.isfile(file) == True:
+                fh = Dataset(file, mode='r') 
+                latitcrs = fh.variables['latitcrs'][:] # latitudes of curvilinear grid
+                longicrs = fh.variables['longicrs'][:] # longitude of curvilinear grid
+                wv_cont_sum_daily_mm = fh.variables['wv_cont_sum_daily_mm'][:] # water vapour contribution of domain cells to each cell where it rained
+                pre = fh.variables['pre'][:] 
+                fh.close()    
+                
+                #Daylist = pandas.date_range(start='1/1/'+str(year),end='31/12/'+str(year),freq='d')
+                
+                df = pandas.DataFrame() # Make a new data frame for every year
+                RR = np.ma.zeros([len(Daylist),n_i,n_j])*np.nan
+                
+                for day in Daylist:#range(len(wv_cont_sum_daily_mm)):
+                    date = day.strftime('%Y%m%d')
+                    dd = np.where(Daylist==day)[0][0]
+        
+                    # Cut up processed results by area
+                    wv_cont_region = np.ma.array(wv_cont_sum_daily_mm[dd,:,:],mask=(wsmask==0))
+                    wv_cont_outregion_land_Aus = np.ma.array(wv_cont_sum_daily_mm[dd,:,:],mask=(outregion_land_Aus==0))
+                    wv_cont_outregion_land_outside_Aus = np.ma.array(wv_cont_sum_daily_mm[dd,:,:],mask=(land_outside_Aus==0))
+                    wv_cont_outregion_ocean = np.ma.array(wv_cont_sum_daily_mm[dd,:,:],mask=(ocean_outside_Aus==0))
+                    wv_cont_outregion_ocean_area = np.count_nonzero(np.ma.array(wv_cont_outregion_ocean,\
+                        mask=(wv_cont_outregion_ocean<wvcont_mm_threshold)))*cell_area #[km2]
+                    pre_region = np.ma.array(pre[dd,:,:],mask=(wsmask==0))
+                    P_total = np.nansum(pre_region) 
+                    
+                    # Calculate total water vapour contributions [%] by area
+                    outregion_ocean_cont = round(np.nansum(wv_cont_outregion_ocean)/np.nansum(pre_region),4)*100  
+                    outregion_land_Aus_cont = round(np.nansum(wv_cont_outregion_land_Aus)/np.nansum(pre_region),4)*100  
+                    outregion_land_outside_Aus_cont = round(np.nansum(wv_cont_outregion_land_outside_Aus)/np.nansum(pre_region),4)*100
+                    RR_region = round(np.nansum(wv_cont_region)/np.nansum(pre_region),4)*100  
+                    check_sum = np.nansum([RR_region,outregion_ocean_cont,outregion_land_Aus_cont, outregion_land_outside_Aus_cont])
+                    if P_total > 0:
+                        model_error = (P_total-np.nansum(wv_cont_sum_daily_mm[dd,:,:]))/P_total*100
+                    else: model_error = np.nan
+                
+                    df = df.append(pandas.DataFrame({'Day':[day],'RR':[RR_region],\
+                    'region_land_mm':[np.nansum(wv_cont_region)],\
+                    'outregion_land_Aus_pct':[outregion_land_Aus_cont],\
+                    'outregion_land_Aus_mm':[np.nansum(wv_cont_outregion_land_Aus)],\
+                    'outregion_land_outside_Aus_pct':[outregion_land_outside_Aus_cont],\
+                    'outregion_land_outside_Aus_mm':[np.nansum(wv_cont_outregion_land_outside_Aus)],\
+                    'outregion_ocean_pct':[outregion_ocean_cont],\
+                    'outregion_ocean_mm':[np.nansum(wv_cont_outregion_ocean)],\
+                    'outregion_ocean_km':[wv_cont_outregion_ocean_area],\
+                    'P_total':[P_total],\
+                    'check_sum_pct':[check_sum],\
+                    'model_error_pct':[model_error]}))#,\
+                    #index=date))
+                    
+                    # Calculate RR in the region
+                    rr = (wv_cont_region/P_total)*100
+                    RR[dd,:,:] =  np.ma.array(rr,mask=rr.mask)
+
+            outname = dir_out+region+'_daily_rainfall_recycling_'+str(year)+'.csv'
+            df.to_csv(outname)      
+            
+            # Save RR grids to netcdf
+            ofile = dir_out+region+'_daily_RR_'+str(year)+'.nc'    
+            with Dataset(ofile, 'w') as of: 
+                of.createDimension('i_cross', n_i)
+                of.createDimension('j_cross', n_j)    
+                of.createDimension('time', len(Daylist))
+                
+                of.createVariable('time', 'f4', ('time'))
+                of['time'].long_name = 'Day'
+                of['time'].units = 'days'
+                of['time'][:] = Daylist.strftime('%Y%m%d')
+            
+                of.createVariable('latitcrs', 'f4', ('i_cross', 'j_cross'))
+                of['latitcrs'].long_name = 'LATITUDE (SOUTH NEGATIVE)'
+                of['latitcrs'].units = 'degrees'
+                of['latitcrs'][:] = latitcrs
+                
+                of.createVariable('longicrs', 'f4', ('i_cross', 'j_cross'))
+                of['longicrs'].long_name = 'LONGITUDE (WEST NEGATIVE)'
+                of['longicrs'].units = 'degrees'
+                of['longicrs'][:] = longicrs
+                
+                of.createVariable('RR', 'f4', ('time','i_cross', 'j_cross'))
+                of['RR'].long_name = 'Ratio of grid cell water vapour contributed to rainfall anywhere in the region to total rainfall in the region'
+                of['RR'].units = '%'
+                of['RR'][:] = RR.filled(fill_value=np.nan) # convert to a non-masked array so netcdf doesn't screw up
+                
+            print year
