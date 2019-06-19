@@ -12,7 +12,7 @@
 ! And copied to here: /g/data/hh5/tmp/w28/jpe561/back_traj/
 
 !%%Model expects:%%
-! % Data to range between -180deg and +180deg.
+! % Data to range between 0deg and 360deg.
 ! % Rainfall: [mm], 3d.
 ! % Latent heat [W/m2], 3d, which is converted to evaporation by program.
 ! % Temperature: actual temperature [K], 4d.
@@ -89,13 +89,13 @@ REAL, PARAMETER :: minpre = 2   !min daily precip to deal with (mm)
 
 INTEGER, PARAMETER :: bdy = 6   !boundary layers to ignore; trajectories will be tracked to this boundary
 
-CHARACTER(LEN=50), PARAMETER :: diri = "/g/data/hh5/tmp/w28/jpe561/back_traj/"   
+CHARACTER(LEN=50), PARAMETER :: diri = "/srv/ccrc/data03/z3131380/PartB/test_data/"   
 !CHARACTER(LEN=100), PARAMETER :: diro = "/g/data/xc0/user/Holgate/QIBT/exp02/"
 CHARACTER(LEN=100) :: diro  
-CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfout/"
-CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfhrly/"  
+CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/srv/ccrc/data03/z3131380/PartB/test_data/"
+CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/srv/ccrc/data03/z3131380/PartB/NARCliM_postprocess/"   
 
-INTEGER, PARAMETER :: numthreads = 32   !set the number of parallel openmp threads
+INTEGER, PARAMETER :: numthreads = 8   !set the number of parallel openmp threads
 
 !CHARACTER(LEN=50), PARAMETER :: fdaylist = "top300precip_days_min0.5.txt"   !file containing
 !CHARACTER(LEN=50), PARAMETER :: fdaylist = "days_of_rain.txt"   !file containing list of days to do qibt on
@@ -1907,6 +1907,8 @@ END SUBROUTINE calc_tpw
 !**************************************************************************
 SUBROUTINE calc_tpw_pbl(mix,pres,surf_pres,tpw,pbl_lev)
 !------------------------------------------
+! SUBROUTINE UNUSED
+
 ! calculate the total precipitable water in the pbl from MM5 fields
 ! at every level and time
 !-------------------------------------------------
@@ -2142,6 +2144,22 @@ y = loc(2)
 END SUBROUTINE near_pt
 
 !*************************************************************************
+
+SUBROUTINE all_positive_longitude(lon2d,lon2d_corrected)
+! NARCliM longitude 2d grid (XLONG) is negative east of dateline.
+! This subroutine converts the negative values to positive.
+
+REAL, DIMENSION(:,:) :: lon2d,lon2d_corrected
+
+lon2d_corrected = lon2d
+
+WHERE (lon2d_corrected < 0)
+lon2d_corrected = lon2d_corrected+360
+END WHERE
+
+END SUBROUTINE all_positive_longitude
+
+!**************************************************************************************
 
 SUBROUTINE bilin_interp(var2d,lon2d,lat2d,par_lon,par_lat,var)
 !------------------------------------------------------------------
@@ -2724,7 +2742,7 @@ CHARACTER(LEN=10):: fname_smon, fname_sday
 INTEGER :: par_lev
 REAL :: ptop,delx,par_lat,par_lon,par_pres,par_q,new_par_q,end_precip 
 INTEGER :: datatstep
-REAL,ALLOCATABLE,DIMENSION(:,:) :: lat2d,lon2d
+REAL,ALLOCATABLE,DIMENSION(:,:) :: lat2d,lon2d,lon2d_corrected
 REAL,ALLOCATABLE,DIMENSION(:,:) :: terrain,WV_cont,WV_cont_day !pstar, > make 3d
 REAL,ALLOCATABLE,DIMENSION(:,:) :: WV_cont_apbl!,WV_cont_day_apbl
 REAL,ALLOCATABLE,DIMENSION(:,:,:) :: precip
@@ -2806,7 +2824,7 @@ else
 fname_sday=TRIM(int_to_string(sday))
 end if
 
-fname="wrfout_d01_"//TRIM(int_to_string(syear))//"-"//TRIM(fname_smon)//"-"//TRIM(fname_sday)//"_00:00:00"
+fname="wrfout_d01_"//TRIM(int_to_string(syear))//"-"//TRIM(fname_smon)//"-"//TRIM(fname_sday)//"_00:00:00.nc"
 print *,'Get header info from first input file: ',fname
 status = NF90_OPEN(TRIM(dirdata_atm)//fname, NF90_NOWRITE, headncid)
 if (status /= NF90_NOERR) call handle_err(status)
@@ -2876,7 +2894,20 @@ if(status /= nf90_NoErr) call handle_err(status)
 
 status = nf90_close(headncid)
 
+! Model expects data to range between 0deg and 360deg. Narclim/WRF 2d longitude ranges between -180deg and +180deg. Where the longitude is negative, add 360deg. Replace the raw longitude 2d grid with the corrected one.
+ALLOCATE(lon2d_corrected(fdim_j,fdim_i))
+call all_positive_longitude(lon2d,lon2d_corrected)
 
+! print *,'lon2d[10,10]=',lon2d(10,10)
+! print *,'lon2d_corrected[10,10]=',lon2d_corrected(10,10)
+! print *,'lon2d[205,134]=',lon2d(205,134)
+! print *,'lon2d_corrected[205,134]=',lon2d_corrected(205,134)
+
+lon2d=lon2d_corrected
+
+
+
+STOP
 !--------------------------------------------------------
 
 !
