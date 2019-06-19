@@ -2129,12 +2129,15 @@ INTEGER, INTENT(OUT) :: x,y
 REAL, DIMENSION(SIZE(lon2d(:,1)),SIZE(lon2d(1,:))) :: dist
 INTEGER, DIMENSION(2) :: loc
 
+REAL, DIMENSION(SIZE(lon2d(:,1)),SIZE(lon2d(1,:))) :: lcos ! --svetlana
 
 !
 !calculate the distance from the parcel location to every grid point
 !must account for changing distance between longitude lines as latitude changes
 !
-dist = SQRT((lat2d-lat)**2 + (cos(lat2d*pi/180)*(lon2d-lon))**2)
+call vsCos(SIZE(lat2d(:,1))*SIZE(lat2d(1,:)), lat2d*pi/180, lcos) ! -- svetlana
+dist = sqrt((lat2d-lat)**2 + lcos*(lon2d-lon)**2) ! --svetlana
+! dist = (lat2d-lat)**2 + cos(lat2d*pi/180)*(lon2d-lon)**2 ! --svetlana
 
 loc = MINLOC(dist)
 
@@ -2906,8 +2909,6 @@ call all_positive_longitude(lon2d,lon2d_corrected)
 lon2d=lon2d_corrected
 
 
-
-STOP
 !--------------------------------------------------------
 
 !
