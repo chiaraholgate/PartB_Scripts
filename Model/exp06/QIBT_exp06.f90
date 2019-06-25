@@ -78,7 +78,7 @@ SAVE
 INTEGER :: sday,smon,syear    !start day for calculations
 INTEGER :: edday,edmon,edyear !end day for calculations (Exclusive. Must be at least one day after start day)
 INTEGER :: totdays
-INTEGER, PARAMETER :: totbtadays = 30   !number of days of data to keep for bta; i.e. how far back in time to calc.
+INTEGER, PARAMETER :: totbtadays = 2   !number of days of data to keep for bta; i.e. how far back in time to calc.
                                        !must be less than days you have input data for
 
 !INTEGER, PARAMETER :: totdays = 30    !total number of days to calculate for; must be <= no. days in days_of_rain.txt
@@ -89,11 +89,15 @@ REAL, PARAMETER :: minpre = 2   !min daily precip to deal with (mm)
 
 INTEGER, PARAMETER :: bdy = 6   !boundary layers to ignore; trajectories will be tracked to this boundary
 
-CHARACTER(LEN=50), PARAMETER :: diri = "/srv/ccrc/data03/z3131380/PartB/test_data/"   
+!CHARACTER(LEN=50), PARAMETER :: diri = "/g/data/hh5/tmp/w28/jpe561/back_traj/"   
+CHARACTER(LEN=50), PARAMETER :: diri = "/srv/ccrc/data03/z3131380/PartB/Masks/"
 !CHARACTER(LEN=100), PARAMETER :: diro = "/g/data/xc0/user/Holgate/QIBT/exp02/"
 CHARACTER(LEN=100) :: diro  
-CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/srv/ccrc/data03/z3131380/PartB/test_data/"
-CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/srv/ccrc/data03/z3131380/PartB/NARCliM_postprocess/"   
+! CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfout/"
+! CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfhrly/"
+CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/srv/ccrc/data33/z3481416/CCRC-WRF3.6.0.5-SEB/ERA-Interim/R2_nudging/out/"
+!CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/srv/ccrc/data03/z3131380/PartB/test_data/"
+CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/srv/ccrc/data03/z3131380/PartB/NARCliM_postprocess/" 
 
 INTEGER, PARAMETER :: numthreads = 8   !set the number of parallel openmp threads
 
@@ -715,9 +719,9 @@ else
   end if
 end if
 
-print *,'L720, outfile=',TRIM(diro)//"bt."//TRIM(int_to_string(year))//"0" &
-  		//TRIM(int_to_string(mon))//"_"//TRIM(int_to_string(INT(daynum)))// &
-		".nc"
+! print *,'L720, outfile=',TRIM(diro)//"bt."//TRIM(int_to_string(year))//"0" &
+!   		//TRIM(int_to_string(mon))//"_"//TRIM(int_to_string(INT(daynum)))// &
+! 		".nc"
 
 !
 !define dimensions
@@ -2129,15 +2133,15 @@ INTEGER, INTENT(OUT) :: x,y
 REAL, DIMENSION(SIZE(lon2d(:,1)),SIZE(lon2d(1,:))) :: dist
 INTEGER, DIMENSION(2) :: loc
 
-REAL, DIMENSION(SIZE(lon2d(:,1)),SIZE(lon2d(1,:))) :: lcos ! --svetlana
+!REAL, DIMENSION(SIZE(lon2d(:,1)),SIZE(lon2d(1,:))) :: lcos ! --svetlana
 
 !
 !calculate the distance from the parcel location to every grid point
 !must account for changing distance between longitude lines as latitude changes
 !
-call vsCos(SIZE(lat2d(:,1))*SIZE(lat2d(1,:)), lat2d*pi/180, lcos) ! -- svetlana
-dist = sqrt((lat2d-lat)**2 + lcos*(lon2d-lon)**2) ! --svetlana
-! dist = (lat2d-lat)**2 + cos(lat2d*pi/180)*(lon2d-lon)**2 ! --svetlana
+!call vsCos(SIZE(lat2d(:,1))*SIZE(lat2d(1,:)), lat2d*pi/180, lcos) ! -- svetlana
+!dist = sqrt((lat2d-lat)**2 + lcos*(lon2d-lon)**2) ! --svetlana
+ dist = (lat2d-lat)**2 + cos(lat2d*pi/180)*(lon2d-lon)**2 ! --svetlana
 
 loc = MINLOC(dist)
 
@@ -2154,11 +2158,17 @@ SUBROUTINE all_positive_longitude(lon2d,lon2d_corrected)
 
 REAL, DIMENSION(:,:) :: lon2d,lon2d_corrected
 
-lon2d_corrected = lon2d
 
-WHERE (lon2d_corrected < 0)
-lon2d_corrected = lon2d_corrected+360
+! WHERE (lon2d_corrected < 0)
+! lon2d_corrected = lon2d_corrected+360
+! END WHERE
+lon2d_corrected=lon2d
+
+WHERE (lon2d < 0) 
+lon2d_corrected = lon2d+360
 END WHERE
+
+
 
 END SUBROUTINE all_positive_longitude
 
@@ -2827,8 +2837,8 @@ else
 fname_sday=TRIM(int_to_string(sday))
 end if
 
-fname="wrfout_d01_"//TRIM(int_to_string(syear))//"-"//TRIM(fname_smon)//"-"//TRIM(fname_sday)//"_00:00:00.nc"
-print *,'Get header info from first input file: ',fname
+fname="wrfout_d01_"//TRIM(int_to_string(syear))//"-"//TRIM(fname_smon)//"-"//TRIM(fname_sday)//"_00:00:00"
+print *,'Get header info from first input file: ',TRIM(dirdata_atm)//fname
 status = NF90_OPEN(TRIM(dirdata_atm)//fname, NF90_NOWRITE, headncid)
 if (status /= NF90_NOERR) call handle_err(status)
 
@@ -2897,18 +2907,23 @@ if(status /= nf90_NoErr) call handle_err(status)
 
 status = nf90_close(headncid)
 
-! Model expects data to range between 0deg and 360deg. Narclim/WRF 2d longitude ranges between -180deg and +180deg. Where the longitude is negative, add 360deg. Replace the raw longitude 2d grid with the corrected one.
-ALLOCATE(lon2d_corrected(fdim_j,fdim_i))
-call all_positive_longitude(lon2d,lon2d_corrected)
+!Model expects data to range between 0deg and 360deg. Narclim/WRF 2d longitude ranges between -180deg and +180deg. Where the longitude is negative, add 360deg. Replace the raw longitude 2d grid with the corrected one.
+ALLOCATE(lon2d_corrected(dim_j,dim_i))
 
 ! print *,'lon2d[10,10]=',lon2d(10,10)
-! print *,'lon2d_corrected[10,10]=',lon2d_corrected(10,10)
 ! print *,'lon2d[205,134]=',lon2d(205,134)
+
+call all_positive_longitude(lon2d,lon2d_corrected)
+
+
+! print *,'lon2d_corrected[10,10]=',lon2d_corrected(10,10)
 ! print *,'lon2d_corrected[205,134]=',lon2d_corrected(205,134)
 
 lon2d=lon2d_corrected
 
-
+! print *,"after subroutine"
+! print *, shape(lon2d)
+! print *, shape(lon2d_corrected)
 !--------------------------------------------------------
 
 !
@@ -2977,6 +2992,7 @@ do dd = 1, totdays
   call new_out_file(outncid,wvcid,wvc2id,xlocid,ylocid,dayid,opreid,day,lat2d,lon2d)
   print *,'created new out file'
 
+  
   ! Get the variables required for back trajectory calculations for the current day
   call get_data(precip,evap,u,v,w,temp,mix,mixcld,mixtot,pp,pb,pbl_hgt,psfc)
   
@@ -3007,7 +3023,10 @@ do dd = 1, totdays
   ! Calculate the subsection x & y dimensions, based on the max distance a parcel can travel in the sim timestep
   ssdim = (ceiling((sqrt(maxval(u)**2+maxval(v)**2)*tstep*60)/delx) *2) + 1
 
-  !loop over x and y grid points
+ 
+
+ 
+ !loop over x and y grid points
   !
   
   !parallelize over the grid points
@@ -3036,7 +3055,6 @@ do dd = 1, totdays
 		STAT = status)
 
 
-  
 !   if (eachParcel) then
 !     ALLOCATE(parcel_stats(10,totsteps), STAT = status)
 !   end if
@@ -3058,6 +3076,7 @@ do dd = 1, totdays
         if (wsmask(xx,yy)==0) CYCLE
       end if
 
+            
       ! Only do something if rain fell at this point on this day
       if (SUM(precip(xx,yy,:))>minpre) then
        
@@ -3151,7 +3170,7 @@ do dd = 1, totdays
 	    par_lat = lat2d(xx,yy)
 	    par_lon = lon2d(xx,yy)
 
-  
+
 	    !$OMP CRITICAL (par_q1)
 	    ! Calculate the parcel mixing ratio. This is used in the calculation of new parcel level in new_parcel_level_w.
 	    par_q = lin_interp(mixtot(xx,yy,par_lev,ttdata:ttdata+1),ttfac) 
