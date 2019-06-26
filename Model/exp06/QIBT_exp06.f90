@@ -89,7 +89,7 @@ REAL, PARAMETER :: minpre = 2   !min daily precip to deal with (mm)
 
 INTEGER, PARAMETER :: bdy = 6   !boundary layers to ignore; trajectories will be tracked to this boundary
 
-!CHARACTER(LEN=50), PARAMETER :: diri = "/g/data/hh5/tmp/w28/jpe561/back_traj/"   
+! CHARACTER(LEN=50), PARAMETER :: diri = "/g/data/hh5/tmp/w28/jpe561/back_traj/"   
 CHARACTER(LEN=50), PARAMETER :: diri = "/srv/ccrc/data03/z3131380/PartB/Masks/"
 !CHARACTER(LEN=100), PARAMETER :: diro = "/g/data/xc0/user/Holgate/QIBT/exp02/"
 CHARACTER(LEN=100) :: diro  
@@ -481,6 +481,8 @@ END FUNCTION simlength
   
 SUBROUTINE days_since_start(daynum)
 !-----------------------------------------
+! SUBROUTINE UNUSED
+
 !number of days since the start of the simulation
 !-------------------------------------------------
 
@@ -560,44 +562,70 @@ IMPLICIT NONE
 !REAL,INTENT(IN) :: simday	!simulation day
 INTEGER,INTENT(IN) :: simday	!simulation day
 
-INTEGER :: days_so_far 
-INTEGER :: mm,yr
+INTEGER :: jday,simdayyear,simdaymonth,simdayday
+
+! INTEGER :: days_so_far 
+! INTEGER :: mm,yr
+! 
+! 
+! days_so_far = 0
+! 
+! !calculate the no. of days in the first year
+! !testing to see if wanted day is in this year
+! do mm = smon,12
+!   days_so_far = days_so_far + days_in_month(mm,syear)
+!   print *,'L573 mm=',mm,'days so far=',days_so_far
+!   
+!   if (mm==smon) days_so_far = days_so_far - sday + 1
+!   print *,'L576 mm=',mm,'days so far=',days_so_far
+!   
+!   if (simday.le.days_so_far) then
+!     year = syear
+!     mon = mm
+!     day = simday - days_so_far + days_in_month(mm,syear) 
+!     return
+!   end if
+!   print *,'L584,year,mon,day=',year,mon,day
+! end do
+!   
+! 
+! !loop through years to find correct month and year
+! yr = syear + 1
+! print *,'L589,yr=',yr
+! do
+!   do mm = 1,12
+!     days_so_far = days_so_far + days_in_month(mm,yr)
+!     print *,'L594,mm,dayssofar=',mm,days_so_far
+!     if (simday.le.days_so_far) then
+!       year = yr
+!       mon = mm
+!       day = simday - days_so_far + days_in_month(mm,yr) - sday + 1
+!       print *,'L599,year,mon,day',year,mon,day
+!       
+!       !print *,simday,day,mon,year
+!       return
+!     end if
+!   end do
+!   yr = yr + 1
+! end do
 
 
-days_so_far = 0
+if (simday==1) then
+year=syear
+mon=smon
+day=sday
+else
+! Find julian day of simday, being the start day + an increment of days
+jday=julian(syear,smon,sday)+(simday-1)
+! Convert the julian day to a gregorian day
+call gregorian(jday,simdayyear,simdaymonth,simdayday)
+year=simdayyear
+mon=simdaymonth
+day=simdayday
+end if
 
-!calculate the no. of days in the first year
-!testing to see if wanted day is in this year
-do mm = smon,12
-  days_so_far = days_so_far + days_in_month(mm,syear)
-  
-  if (mm==smon) days_so_far = days_so_far - sday + 1
-  
-  if (simday.le.days_so_far) then
-    year = syear
-    mon = mm
-    day = simday - days_so_far + days_in_month(mm,syear) 
-    return
-  end if
-end do
-  
 
-!loop through years to find correct month and year
-yr = syear + 1
-do
-  do mm = 1,12
-    days_so_far = days_so_far + days_in_month(mm,yr)
-    if (simday.le.days_so_far) then
-      year = yr
-      mon = mm
-      day = simday - days_so_far + days_in_month(mm,yr) - sday + 1
-      
-      !print *,simday,day,mon,year
-      return
-    end if
-  end do
-  yr = yr + 1
-end do
+
 
 END SUBROUTINE day_month_year
 
@@ -2133,14 +2161,14 @@ INTEGER, INTENT(OUT) :: x,y
 REAL, DIMENSION(SIZE(lon2d(:,1)),SIZE(lon2d(1,:))) :: dist
 INTEGER, DIMENSION(2) :: loc
 
-!REAL, DIMENSION(SIZE(lon2d(:,1)),SIZE(lon2d(1,:))) :: lcos ! --svetlana
+! REAL, DIMENSION(SIZE(lon2d(:,1)),SIZE(lon2d(1,:))) :: lcos ! --svetlana
 
 !
 !calculate the distance from the parcel location to every grid point
 !must account for changing distance between longitude lines as latitude changes
 !
-!call vsCos(SIZE(lat2d(:,1))*SIZE(lat2d(1,:)), lat2d*pi/180, lcos) ! -- svetlana
-!dist = sqrt((lat2d-lat)**2 + lcos*(lon2d-lon)**2) ! --svetlana
+! call vsCos(SIZE(lat2d(:,1))*SIZE(lat2d(1,:)), lat2d*pi/180, lcos) ! -- svetlana
+! dist = sqrt((lat2d-lat)**2 + lcos*(lon2d-lon)**2) ! --svetlana
  dist = (lat2d-lat)**2 + cos(lat2d*pi/180)*(lon2d-lon)**2 ! --svetlana
 
 loc = MINLOC(dist)
