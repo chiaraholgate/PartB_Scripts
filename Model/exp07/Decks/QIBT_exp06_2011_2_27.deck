@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# PURPOSE
+#===========
+# This script is a template for creating a PBS jobscript for each week to be simulated by the QIBT program, and submitting it to the queue.
+# The related python script "Create_QIBT_raijin_decks.py" creates a series of new decks by substituting the text in this template framed by % signs. 
+
+# USE
+#===========
+# (1) Compile program
+# **TO COMPILE ON SANDY BRIDGE**
+# module load pbs dot intel-fc/12.1.9.293 intel-cc/12.1.9.293 netcdf/4.2.1.1 openmpi/1.10.2
+# export OMP_NUM_THREADS=16
+# ulimit -s unlimited
+# ifort -openmp QIBT_exp03.f90 -o QIBT_exp03 -lnetcdff -lnetcdf
+ 
+# **TO COMPILE ON BROADWELL**
+# module load pbs dot intel-fc/12.1.9.293 intel-cc/17.0.1.132 netcdf/4.2.1.1 openmpi/1.10.2
+# export OMP_NUM_THREADS=28
+# ulimit -s unlimited
+# ifort -xCORE-AVX2 -openmp QIBT_exp03.f90 -o QIBT_exp03 -lnetcdff -lnetcdf
+
+# **TO COMPILE ON SKYLAKE**
+# module load pbs dot intel-fc/2019.3.199 intel-cc/2019.3.199 netcdf/4.6.1 openmpi/4.0.0
+# export OMP_NUM_THREADS=32
+# ulimit -s unlimited
+# ifort -xSKYLAKE -parallel QIBT_exp04.f90 -o QIBT_exp04 -lnetcdff -lnetcdf
+
+# (2) Run the decks from /home/603/cxh603/PhD/PartB/Scripts/Model/exp04
+# e.g. cd /home/603/cxh603/PhD/PartB/Scripts/Model/exp04
+#      for file in pbs_scripts/Decks/Spring/*1979*; do 
+#		./pbs_scripts/Decks/Spring/${file##*/}
+#		done
+#     for file in pbs_scripts/Decks/Summer/*198*; do ./pbs_scripts/Decks/Summer/${file##*/}; done
+
+#===========
+cat > /home/603/cxh603/PhD/PartB/Scripts/Model/exp07/pbs_scripts/QIBT_exp07_2011_2_27.pbs << EOF_QIBT_exp07
+#!/bin/bash
+#PBS -P w35
+#PBS -q normalsl
+#PBS -l ncpus=8
+#PBS -l mem=16GB
+#PBS -l walltime=30:00:00
+#PBS -l wd
+#PBS -l jobfs=3GB
+
+ulimit -s unlimited
+export OMP_NUM_THREADS=8
+export DIROUT=/short/w28/cxh603/QIBT/exp07
+
+/home/603/cxh603/PhD/PartB/Scripts/Model/exp07/QIBT_exp07 27 2 2011 6 3 2011 \$PBS_JOBFS/
+
+cp \$PBS_JOBFS/* \$DIROUT
+
+EOF_QIBT_exp07
+
+qsub /home/603/cxh603/PhD/PartB/Scripts/Model/exp07/pbs_scripts/QIBT_exp07_2011_2_27.pbs
