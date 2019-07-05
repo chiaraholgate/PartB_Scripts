@@ -78,10 +78,8 @@ SAVE
 INTEGER :: sday,smon,syear    !start day for calculations
 INTEGER :: edday,edmon,edyear !end day for calculations (Exclusive. Must be at least one day after start day)
 INTEGER :: totdays
-INTEGER, PARAMETER :: totbtadays = 2   !number of days of data to keep for bta; i.e. how far back in time to calc.
+INTEGER, PARAMETER :: totbtadays = 30   !number of days of data to keep for bta; i.e. how far back in time to calc.
                                        !must be less than days you have input data for
-
-!INTEGER, PARAMETER :: totdays = 30    !total number of days to calculate for; must be <= no. days in days_of_rain.txt
 INTEGER, PARAMETER :: tstep = 10   !number of minutes for back trajectory time step (simultion time step)
                       !must divide evenly into number of minutes in day 1440 and number of minutes in MM5 time step (here 180)
 INTEGER, PARAMETER :: nparcels = 100   !set the number of parcels to release if it rains
@@ -89,14 +87,14 @@ REAL, PARAMETER :: minpre = 2   !min daily precip to deal with (mm)
 
 INTEGER, PARAMETER :: bdy = 6   !boundary layers to ignore; trajectories will be tracked to this boundary
 
-! CHARACTER(LEN=50), PARAMETER :: diri = "/g/data/hh5/tmp/w28/jpe561/back_traj/" 
-CHARACTER(LEN=50), PARAMETER :: diri = "/srv/ccrc/data03/z3131380/PartB/Masks/"
+CHARACTER(LEN=50), PARAMETER :: diri = "/g/data/hh5/tmp/w28/jpe561/back_traj/" 
+! CHARACTER(LEN=50), PARAMETER :: diri = "/srv/ccrc/data03/z3131380/PartB/Masks/"
 !CHARACTER(LEN=100), PARAMETER :: diro = "/g/data/xc0/user/Holgate/QIBT/exp02/"
 CHARACTER(LEN=100) :: diro  
-! CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfout/"
-! CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfhrly/"  
-CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/srv/ccrc/data33/z3481416/CCRC-WRF3.6.0.5-SEB/ERA-Interim/R2_nudging/out/"
-CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/srv/ccrc/data03/z3131380/PartB/NARCliM_postprocess/" 
+CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfout/"
+CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfhrly/"  
+! CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/srv/ccrc/data33/z3481416/CCRC-WRF3.6.0.5-SEB/ERA-Interim/R2_nudging/out/"
+! CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/srv/ccrc/data03/z3131380/PartB/NARCliM_postprocess/" 
 
 INTEGER, PARAMETER :: numthreads = 8   !set the number of parallel openmp threads
 
@@ -559,44 +557,58 @@ IMPLICIT NONE
 !REAL,INTENT(IN) :: simday	!simulation day
 INTEGER,INTENT(IN) :: simday	!simulation day
 
-INTEGER :: days_so_far 
-INTEGER :: mm,yr
+! INTEGER :: days_so_far 
+! INTEGER :: mm,yr
+! 
+! 
+! days_so_far = 0
+! 
+! !calculate the no. of days in the first year
+! !testing to see if wanted day is in this year
+! do mm = smon,12
+!   days_so_far = days_so_far + days_in_month(mm,syear)
+!   
+!   if (mm==smon) days_so_far = days_so_far - sday + 1
+!   
+!   if (simday.le.days_so_far) then
+!     year = syear
+!     mon = mm
+!     day = simday - days_so_far + days_in_month(mm,syear) 
+!     return
+!   end if
+! end do
+!   
+! 
+! !loop through years to find correct month and year
+! yr = syear + 1
+! do
+!   do mm = 1,12
+!     days_so_far = days_so_far + days_in_month(mm,yr)
+!     if (simday.le.days_so_far) then
+!       year = yr
+!       mon = mm
+!       day = simday - days_so_far + days_in_month(mm,yr) - sday + 1
+!       
+!       !print *,simday,day,mon,year
+!       return
+!     end if
+!   end do
+!   yr = yr + 1
+! end do
 
-
-days_so_far = 0
-
-!calculate the no. of days in the first year
-!testing to see if wanted day is in this year
-do mm = smon,12
-  days_so_far = days_so_far + days_in_month(mm,syear)
-  
-  if (mm==smon) days_so_far = days_so_far - sday + 1
-  
-  if (simday.le.days_so_far) then
-    year = syear
-    mon = mm
-    day = simday - days_so_far + days_in_month(mm,syear) 
-    return
-  end if
-end do
-  
-
-!loop through years to find correct month and year
-yr = syear + 1
-do
-  do mm = 1,12
-    days_so_far = days_so_far + days_in_month(mm,yr)
-    if (simday.le.days_so_far) then
-      year = yr
-      mon = mm
-      day = simday - days_so_far + days_in_month(mm,yr) - sday + 1
-      
-      !print *,simday,day,mon,year
-      return
-    end if
-  end do
-  yr = yr + 1
-end do
+if (simday==1) then
+year=syear
+mon=smon
+day=sday
+else
+! Find julian day of simday, being the start day + an increment of days
+jday=julian(syear,smon,sday)+(simday-1)
+! Convert the julian day to a gregorian day
+call gregorian(jday,simdayyear,simdaymonth,simdayday)
+year=simdayyear
+mon=simdaymonth
+day=simdayday
+end if
 
 END SUBROUTINE day_month_year
 
@@ -2130,15 +2142,15 @@ INTEGER, INTENT(OUT) :: x,y
 REAL, DIMENSION(SIZE(lon2d(:,1)),SIZE(lon2d(1,:))) :: dist
 INTEGER, DIMENSION(2) :: loc
 
-! REAL, DIMENSION(SIZE(lon2d(:,1)),SIZE(lon2d(1,:))) :: lcos ! --svetlana
+REAL, DIMENSION(SIZE(lon2d(:,1)),SIZE(lon2d(1,:))) :: lcos ! --svetlana
 
 !
 !calculate the distance from the parcel location to every grid point
 !must account for changing distance between longitude lines as latitude changes
 !
-! call vsCos(SIZE(lat2d(:,1))*SIZE(lat2d(1,:)), lat2d*pi/180, lcos) ! -- svetlana
-! dist = sqrt((lat2d-lat)**2 + lcos*(lon2d-lon)**2) ! --svetlana
- dist = (lat2d-lat)**2 + cos(lat2d*pi/180)*(lon2d-lon)**2 ! --svetlana
+call vsCos(SIZE(lat2d(:,1))*SIZE(lat2d(1,:)), lat2d*pi/180, lcos) ! -- svetlana
+dist = sqrt((lat2d-lat)**2 + lcos*(lon2d-lon)**2) ! --svetlana
+!  dist = (lat2d-lat)**2 + cos(lat2d*pi/180)*(lon2d-lon)**2 ! --svetlana
 
 loc = MINLOC(dist)
 
@@ -2358,23 +2370,23 @@ INTEGER, DIMENSION(1) :: dummy_lev
 ! Here I use the hydrostatic eqn to calculate the change in pressure given w.
 ! deltaP = rho*g*deltaz when in hydrostatic equilibrium
 !
-print *,'L2361 NEW_PARCEL_LEVEL_W par_pres=',par_pres
+! print *,'L2361 NEW_PARCEL_LEVEL_W par_pres=',par_pres
 par_pres = par_pres + -1.*(par_pres/(Rd*(1+0.61*mix)*temp))*g*w*tstep*60
-print *,'L2363 mix,temp,w=',mix,temp,w
-print *,'L2364 par_pres=',par_pres
+! print *,'L2363 mix,temp,w=',mix,temp,w
+! print *,'L2364 par_pres=',par_pres
 
 ! Find the model level where the difference in pressure between the parcel
 ! and the atmosphere is the smallest, i.e. which height in pres does the 
 ! smallest difference occur, where pres dims are (lat,lon,height).
 dummy_lev = MINLOC(ABS(pres - par_pres))
-print *,'L2370 dummy_lev=',dummy_lev
+! print *,'L2370 dummy_lev=',dummy_lev
 
 lev = dummy_lev(1)
-print *,'L2373 lev=',lev
+! print *,'L2373 lev=',lev
 
 !if the parcel is below the lowest model level then set it to the lowest level
 if (par_pres > MAXVAL(pres)) par_pres = MAXVAL(pres)
-print *,'L2377, par_pres=',par_pres
+! print *,'L2377, par_pres=',par_pres
 
 ! if (lev==0) then
 !   print *,'par_lev_w - pres_dis',(pres - par_pres),temp,w
@@ -2665,7 +2677,7 @@ call advect(-1.*u_back,-1.*v_back,lon,lat)
 !calculate which vertical level that w moves us to
 call near_pt(lon2d,lat2d,lon,lat,xx,yy)
 pr = par_pres
-print *,'L2666 BACK-TRAJ pr=',pr
+! print *,'L2666 BACK-TRAJ pr=',pr
 call bilin_interp(temp(:,:,par_lev),lon2d,lat2d,lon,lat,temp_par)
 call bilin_interp(w(:,:,par_lev,2),lon2d,lat2d,lon,lat,w_par)
 call new_parcel_level_w(pr,pres(xx,yy,:),-1.*w_par,temp_par,par_q,lev)
@@ -2903,7 +2915,7 @@ datatotsteps = (datadaysteps*(totbtadays+1)) + 1 ! total number of input file ti
 ALLOCATE( precip(dim_j,dim_i,datadaysteps), &
   evap(dim_j,dim_i,datatotsteps),u(dim_j,dim_i,dim_k,datatotsteps), &
   v(dim_j,dim_i,dim_k,datatotsteps),temp(dim_j,dim_i,dim_k,datatotsteps), &
-  !act_temp(dim_j,dim_i,dim_k,datatotsteps), &
+  act_temp(dim_j,dim_i,dim_k,datatotsteps), &
   mix(dim_j,dim_i,dim_k,datatotsteps),pp(dim_j,dim_i,dim_k,datatotsteps),pb(dim_j,dim_i,dim_k,datatotsteps), &
   !pot_temp(dim_j,dim_i,dim_k,datatotsteps), &
   mixtot(dim_j,dim_i,dim_k,datatotsteps), &
@@ -2975,12 +2987,12 @@ do dd = 1, totdays
   
   ! wrfout gives T as pertubation potential temperature. Model expects actual temperature, so convert it:
   call calc_actual_temp(temp,pres,act_temp)
-print *,'T[1,1,29,17]=',temp(1,1,29,17),'K'
-print *,'pres[1,1,29,17]=',pres(1,1,29,17),'Pa'
-print *,'manual_act_temp=',(temp(1,1,29,17)+300)*((P0/pres(1,1,29,17))**(-Rd/Cp)),'K'
-print *,'manual_act_temp=',((temp(1,1,29,17)+300)*((P0/pres(1,1,29,17))**(-Rd/Cp)))-273.15,'degC'
-print *,'act_temp[1,1,29,17]=',act_temp(1,1,29,17),' K'
-print *,'act_temp[1,1,29,17]=',act_temp(1,1,29,17)-273.15,'degC'
+! print *,'T[1,1,29,17]=',temp(1,1,29,17),'K'
+! print *,'pres[1,1,29,17]=',pres(1,1,29,17),'Pa'
+! print *,'manual_act_temp=',(temp(1,1,29,17)+300)*((P0/pres(1,1,29,17))**(-Rd/Cp)),'K'
+! print *,'manual_act_temp=',((temp(1,1,29,17)+300)*((P0/pres(1,1,29,17))**(-Rd/Cp)))-273.15,'degC'
+! print *,'act_temp[1,1,29,17]=',act_temp(1,1,29,17),' K'
+! print *,'act_temp[1,1,29,17]=',act_temp(1,1,29,17)-273.15,'degC'
 
 
   ! Calculate the precipitable water accumulated from the ground up on day of interest (lat,lon,height,time). 
@@ -3266,7 +3278,7 @@ print *,'act_temp[1,1,29,17]=',act_temp(1,1,29,17)-273.15,'degC'
 	      call implicit_back_traj_w(unow,vnow,wnow,tempnow,pres_then,lon2d(ssx:ssx+ssdim-1,ssy:ssy+ssdim-1),lat2d(ssx:ssx+ssdim-1,ssy:ssy+ssdim-1),par_lon,par_lat,par_lev,par_pres,par_q,threadnum)
 	      !$OMP END CRITICAL (trajw)
 	      			
-	      STOP
+	     
 	
 	      ! Find the grid cell nearest the new lat,lon of the parcel 
 	      !$OMP CRITICAL (near)
