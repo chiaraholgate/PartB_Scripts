@@ -12,7 +12,7 @@
 ! And copied to here: /g/data/hh5/tmp/w28/jpe561/back_traj/
 
 !%%Model expects:%%
-! % Data to range between -180deg and +180deg.
+! % Data to range between 0deg and 360deg.
 ! % Rainfall: [mm], 3d.
 ! % Latent heat [W/m2], 3d, which is converted to evaporation by program.
 ! % Temperature: actual temperature [K], 4d.
@@ -559,44 +559,60 @@ IMPLICIT NONE
 !REAL,INTENT(IN) :: simday	!simulation day
 INTEGER,INTENT(IN) :: simday	!simulation day
 
-INTEGER :: days_so_far 
-INTEGER :: mm,yr
+INTEGER :: jday,simdayyear,simdaymonth,simdayday
 
+! INTEGER :: days_so_far 
+! INTEGER :: mm,yr
+! 
+! 
+! days_so_far = 0
+! 
+! !calculate the no. of days in the first year
+! !testing to see if wanted day is in this year
+! do mm = smon,12
+!   days_so_far = days_so_far + days_in_month(mm,syear)
+!   
+!   if (mm==smon) days_so_far = days_so_far - sday + 1
+!   
+!   if (simday.le.days_so_far) then
+!     year = syear
+!     mon = mm
+!     day = simday - days_so_far + days_in_month(mm,syear) 
+!     return
+!   end if
+! end do
+!   
+! 
+! !loop through years to find correct month and year
+! yr = syear + 1
+! do
+!   do mm = 1,12
+!     days_so_far = days_so_far + days_in_month(mm,yr)
+!     if (simday.le.days_so_far) then
+!       year = yr
+!       mon = mm
+!       day = simday - days_so_far + days_in_month(mm,yr) - sday + 1
+!       
+!       !print *,simday,day,mon,year
+!       return
+!     end if
+!   end do
+!   yr = yr + 1
+! end do
 
-days_so_far = 0
-
-!calculate the no. of days in the first year
-!testing to see if wanted day is in this year
-do mm = smon,12
-  days_so_far = days_so_far + days_in_month(mm,syear)
-  
-  if (mm==smon) days_so_far = days_so_far - sday + 1
-  
-  if (simday.le.days_so_far) then
-    year = syear
-    mon = mm
-    day = simday - days_so_far + days_in_month(mm,syear) 
-    return
-  end if
-end do
-  
-
-!loop through years to find correct month and year
-yr = syear + 1
-do
-  do mm = 1,12
-    days_so_far = days_so_far + days_in_month(mm,yr)
-    if (simday.le.days_so_far) then
-      year = yr
-      mon = mm
-      day = simday - days_so_far + days_in_month(mm,yr) - sday + 1
-      
-      !print *,simday,day,mon,year
-      return
-    end if
-  end do
-  yr = yr + 1
-end do
+if (simday==1) then
+year=syear
+mon=smon
+day=sday
+else
+! Find julian day of simday, being the start day + an increment of days
+jday=julian(syear,smon,sday)+(simday-1)
+! Convert the julian day to a gregorian day
+call gregorian(jday,simdayyear,simdaymonth,simdayday)
+year=simdayyear
+mon=simdaymonth
+day=simdayday
+end if
 
 END SUBROUTINE day_month_year
 
