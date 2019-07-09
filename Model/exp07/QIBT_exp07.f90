@@ -78,7 +78,7 @@ SAVE
 INTEGER :: sday,smon,syear    !start day for calculations
 INTEGER :: edday,edmon,edyear !end day for calculations (Exclusive. Must be at least one day after start day)
 INTEGER :: totdays
-INTEGER, PARAMETER :: totbtadays = 2   !number of days of data to keep for bta; i.e. how far back in time to calc.
+INTEGER, PARAMETER :: totbtadays = 30   !number of days of data to keep for bta; i.e. how far back in time to calc.
                                        !must be less than days you have input data for
 
 !INTEGER, PARAMETER :: totdays = 30    !total number of days to calculate for; must be <= no. days in days_of_rain.txt
@@ -89,14 +89,14 @@ REAL, PARAMETER :: minpre = 2   !min daily precip to deal with (mm)
 
 INTEGER, PARAMETER :: bdy = 6   !boundary layers to ignore; trajectories will be tracked to this boundary
 
-! CHARACTER(LEN=50), PARAMETER :: diri = "/g/data/hh5/tmp/w28/jpe561/back_traj/" 
-CHARACTER(LEN=50), PARAMETER :: diri = "/srv/ccrc/data03/z3131380/PartB/Masks/"
+CHARACTER(LEN=50), PARAMETER :: diri = "/g/data/hh5/tmp/w28/jpe561/back_traj/" 
+! CHARACTER(LEN=50), PARAMETER :: diri = "/srv/ccrc/data03/z3131380/PartB/Masks/"
 !CHARACTER(LEN=100), PARAMETER :: diro = "/g/data/xc0/user/Holgate/QIBT/exp02/"
 CHARACTER(LEN=100) :: diro  
-! CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfout/"
-! CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfhrly/"  
-CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/srv/ccrc/data33/z3481416/CCRC-WRF3.6.0.5-SEB/ERA-Interim/R2_nudging/out/"
-CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/srv/ccrc/data03/z3131380/PartB/NARCliM_postprocess/" 
+CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfout/"
+CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfhrly/"  
+! CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/srv/ccrc/data33/z3481416/CCRC-WRF3.6.0.5-SEB/ERA-Interim/R2_nudging/out/"
+! CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/srv/ccrc/data03/z3131380/PartB/NARCliM_postprocess/" 
 
 INTEGER, PARAMETER :: numthreads = 8   !set the number of parallel openmp threads
 
@@ -2675,7 +2675,7 @@ call advect(-1.*u_back,-1.*v_back,lon,lat)
 !calculate which vertical level that w moves us to
 call near_pt(lon2d,lat2d,lon,lat,xx,yy)
 pr = par_pres
-print *,'L2666 pr=',pr
+! print *,'L2666 pr=',pr
 call bilin_interp(temp(:,:,par_lev),lon2d,lat2d,lon,lat,temp_par)
 call bilin_interp(w(:,:,par_lev,2),lon2d,lat2d,lon,lat,w_par)
 call new_parcel_level_w(pr,pres(xx,yy,:),-1.*w_par,temp_par,par_q,lev)
@@ -3268,8 +3268,7 @@ do dd = 1, totdays
 	      call implicit_back_traj_w(unow,vnow,wnow,tempnow,pres_then,lon2d(ssx:ssx+ssdim-1,ssy:ssy+ssdim-1),lat2d(ssx:ssx+ssdim-1,ssy:ssy+ssdim-1),par_lon,par_lat,par_lev,par_pres,par_q,threadnum)
 	      !$OMP END CRITICAL (trajw)
 	      			
-	      STOP
-	
+	      	
 	      ! Find the grid cell nearest the new lat,lon of the parcel 
 	      !$OMP CRITICAL (near)
 	      call near_pt(lon2d,lat2d,par_lon,par_lat,x,y)
