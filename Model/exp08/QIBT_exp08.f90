@@ -557,6 +557,8 @@ IMPLICIT NONE
 !REAL,INTENT(IN) :: simday	!simulation day
 INTEGER,INTENT(IN) :: simday	!simulation day
 
+INTEGER :: jday,simdayyear,simdaymonth,simdayday
+
 ! INTEGER :: days_so_far 
 ! INTEGER :: mm,yr
 ! 
@@ -2803,7 +2805,7 @@ edyear = string_to_int(args(6))
 call get_command_argument(7,args(7))
 diro = args(7)
 
-print *,diro
+print *,"Results saved to: ",diro
 
 ! Find total number of days to run simulation for, given input start and end dates
 totdays=simlength(sday,smon,syear,edday,edmon,edyear)
