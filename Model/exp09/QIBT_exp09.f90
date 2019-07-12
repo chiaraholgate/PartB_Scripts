@@ -78,7 +78,7 @@ SAVE
 INTEGER :: sday,smon,syear    !start day for calculations
 INTEGER :: edday,edmon,edyear !end day for calculations (Exclusive. Must be at least one day after start day)
 INTEGER :: totdays
-INTEGER, PARAMETER :: totbtadays = 2   !number of days of data to keep for bta; i.e. how far back in time to calc.
+INTEGER, PARAMETER :: totbtadays = 30   !number of days of data to keep for bta; i.e. how far back in time to calc.
                                        !must be less than days you have input data for
 INTEGER, PARAMETER :: tstep = 10   !number of minutes for back trajectory time step (simultion time step)
                       !must divide evenly into number of minutes in day 1440 and number of minutes in MM5 time step (here 180)
@@ -87,16 +87,16 @@ REAL, PARAMETER :: minpre = 2   !min daily precip to deal with (mm)
 
 INTEGER, PARAMETER :: bdy = 6   !boundary layers to ignore; trajectories will be tracked to this boundary
 
-! CHARACTER(LEN=50), PARAMETER :: diri = "/g/data/hh5/tmp/w28/jpe561/back_traj/" 
-CHARACTER(LEN=50), PARAMETER :: diri = "/srv/ccrc/data03/z3131380/PartB/Masks/"
+CHARACTER(LEN=50), PARAMETER :: diri = "/g/data/hh5/tmp/w28/jpe561/back_traj/" 
+! CHARACTER(LEN=50), PARAMETER :: diri = "/srv/ccrc/data03/z3131380/PartB/Masks/"
 !CHARACTER(LEN=100), PARAMETER :: diro = "/g/data/xc0/user/Holgate/QIBT/exp02/"
 CHARACTER(LEN=100) :: diro  
-! CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfout/"
-! CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfhrly/"  
-CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/srv/ccrc/data33/z3481416/CCRC-WRF3.6.0.5-SEB/ERA-Interim/R2_nudging/out/"
-CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/srv/ccrc/data03/z3131380/PartB/NARCliM_postprocess/" 
+CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfout/"
+CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfhrly/"  
+! CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/srv/ccrc/data33/z3481416/CCRC-WRF3.6.0.5-SEB/ERA-Interim/R2_nudging/out/"
+! CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/srv/ccrc/data03/z3131380/PartB/NARCliM_postprocess/" 
 
-INTEGER, PARAMETER :: numthreads = 1   !set the number of parallel openmp threads
+INTEGER, PARAMETER :: numthreads = 8   !set the number of parallel openmp threads
 
 !CHARACTER(LEN=50), PARAMETER :: fdaylist = "top300precip_days_min0.5.txt"   !file containing
 !CHARACTER(LEN=50), PARAMETER :: fdaylist = "days_of_rain.txt"   !file containing list of days to do qibt on
@@ -1830,7 +1830,7 @@ REAL, INTENT(IN), DIMENSION(:,:,:) :: surf_pres
 REAL, INTENT(OUT), DIMENSION(:,:,:,:) :: pw
 
 REAL, DIMENSION(dim_j,dim_i,dim_k,SIZE(mix,4)) :: dp
-INTEGER :: k,t
+INTEGER :: k
 
 REAL, INTENT(IN) :: ptop
 
@@ -2159,15 +2159,15 @@ INTEGER, INTENT(OUT) :: x,y
 REAL, DIMENSION(SIZE(lon2d(:,1)),SIZE(lon2d(1,:))) :: dist
 INTEGER, DIMENSION(2) :: loc
 
-! REAL, DIMENSION(SIZE(lon2d(:,1)),SIZE(lon2d(1,:))) :: lcos ! --svetlana
+REAL, DIMENSION(SIZE(lon2d(:,1)),SIZE(lon2d(1,:))) :: lcos ! --svetlana
 
 !
 !calculate the distance from the parcel location to every grid point
 !must account for changing distance between longitude lines as latitude changes
 !
-! call vsCos(SIZE(lat2d(:,1))*SIZE(lat2d(1,:)), lat2d*pi/180, lcos) ! -- svetlana
-! dist = sqrt((lat2d-lat)**2 + lcos*(lon2d-lon)**2) ! --svetlana
- dist = (lat2d-lat)**2 + cos(lat2d*pi/180)*(lon2d-lon)**2 ! --svetlana
+call vsCos(SIZE(lat2d(:,1))*SIZE(lat2d(1,:)), lat2d*pi/180, lcos) ! -- svetlana
+dist = sqrt((lat2d-lat)**2 + lcos*(lon2d-lon)**2) ! --svetlana
+!  dist = (lat2d-lat)**2 + cos(lat2d*pi/180)*(lon2d-lon)**2 ! --svetlana
 
 loc = MINLOC(dist)
 
@@ -2398,23 +2398,19 @@ INTEGER, DIMENSION(1) :: dummy_lev
 ! deltaP = rho*g*deltaz when in hydrostatic equilibrium
 ! Note that "(1+0.61*mix)*temp" is the virtual temp. See p80 Wallace & Hobbs.
 !
-! print *,'L2361 NEW_PARCEL_LEVEL_W par_pres=',par_pres
+
 par_pres = par_pres + -1.*(par_pres/(Rd*(1+0.61*mix)*temp))*g*w*tstep*60
-! print *,'L2363 mix,temp,w=',mix,temp,w
-! print *,'L2364 par_pres=',par_pres
+
 
 ! Find the model level where the difference in pressure between the parcel
 ! and the atmosphere is the smallest, i.e. which height in pres does the 
 ! smallest difference occur, where pres dims are (lat,lon,height).
 dummy_lev = MINLOC(ABS(pres - par_pres))
-! print *,'L2370 dummy_lev=',dummy_lev
 
 lev = dummy_lev(1)
-! print *,'L2373 lev=',lev
 
 !if the parcel is below the lowest model level then set it to the lowest level
 if (par_pres > MAXVAL(pres)) par_pres = MAXVAL(pres)
-! print *,'L2377, par_pres=',par_pres
 
 ! if (lev==0) then
 !   print *,'par_lev_w - pres_dis',(pres - par_pres),temp,w
