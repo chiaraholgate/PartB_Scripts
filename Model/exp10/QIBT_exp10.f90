@@ -3476,6 +3476,7 @@ do dd = 1, totdays
 	      !$OMP END CRITICAl (wnow1)
 	      
 	      !$OMP CRITICAl (tempnow1)
+	      ! The temperature (now) is used to determine the temperature of the parcel before it's advected. (The initial pressure of the parcel was already calculated before nn. Subsequent parcel pressures, as the parcel is moved backward in each time step, are determined within the back-trajectory routine, or more specifically, during the routine to determine the parcel's new height (i.e. pressure).) 
 	      tempnow(:,:,:) = lin_interp3D(act_temp(ssx:ssx+ssdim-1,ssy:ssy+ssdim-1,:,nnMM5:nnMM5+1),nnfac)
 	      !$OMP END CRITICAl (tempnow1)
 	      
