@@ -78,7 +78,7 @@ SAVE
 INTEGER :: sday,smon,syear    !start day for calculations
 INTEGER :: edday,edmon,edyear !end day for calculations (Exclusive. Must be at least one day after start day)
 INTEGER :: totdays
-INTEGER, PARAMETER :: totbtadays = 2   !number of days of data to keep for bta; i.e. how far back in time to calc.
+INTEGER, PARAMETER :: totbtadays = 30   !number of days of data to keep for bta; i.e. how far back in time to calc.
                                        !must be less than days you have input data for
 INTEGER, PARAMETER :: tstep = 10   !number of minutes for back trajectory time step (simultion time step)
                       !must divide evenly into number of minutes in day 1440 and number of minutes in MM5 time step (here 180)
@@ -87,16 +87,16 @@ REAL, PARAMETER :: minpre = 2   !min daily precip to deal with (mm)
 
 INTEGER, PARAMETER :: bdy = 6   !boundary layers to ignore; trajectories will be tracked to this boundary
 
-! CHARACTER(LEN=50), PARAMETER :: diri = "/g/data/hh5/tmp/w28/jpe561/back_traj/" 
-CHARACTER(LEN=50), PARAMETER :: diri = "/srv/ccrc/data03/z3131380/PartB/Masks/"
+CHARACTER(LEN=50), PARAMETER :: diri = "/g/data/hh5/tmp/w28/jpe561/back_traj/" 
+! CHARACTER(LEN=50), PARAMETER :: diri = "/srv/ccrc/data03/z3131380/PartB/Masks/"
 !CHARACTER(LEN=100), PARAMETER :: diro = "/g/data/xc0/user/Holgate/QIBT/exp02/"
 CHARACTER(LEN=100) :: diro  
-! CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfout/"
-! CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfhrly/"  
-CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/srv/ccrc/data33/z3481416/CCRC-WRF3.6.0.5-SEB/ERA-Interim/R2_nudging/out/"
-CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/srv/ccrc/data03/z3131380/PartB/NARCliM_postprocess/" 
+CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfout/"
+CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfhrly/"  
+! CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/srv/ccrc/data33/z3481416/CCRC-WRF3.6.0.5-SEB/ERA-Interim/R2_nudging/out/"
+! CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/srv/ccrc/data03/z3131380/PartB/NARCliM_postprocess/" 
 
-INTEGER, PARAMETER :: numthreads = 1   !set the number of parallel openmp threads
+INTEGER, PARAMETER :: numthreads = 8   !set the number of parallel openmp threads
 
 !CHARACTER(LEN=50), PARAMETER :: fdaylist = "top300precip_days_min0.5.txt"   !file containing
 !CHARACTER(LEN=50), PARAMETER :: fdaylist = "days_of_rain.txt"   !file containing list of days to do qibt on
@@ -2891,7 +2891,6 @@ lon = par_lon
 lat = par_lat
 
 call near_pt(lon2d,lat2d,lon,lat,xx,yy)
-print *,'BTA nearpt 1=',xx,yy
 
 call bilin_interp(u(:,:,par_lev,2),lon2d,lat2d,xx,yy,lon,lat,u_back) ! where lon2d/lat2d are the subgrids
 call bilin_interp(v(:,:,par_lev,2),lon2d,lat2d,xx,yy,lon,lat,v_back)
@@ -2907,7 +2906,6 @@ call advect(-1.*u_back,-1.*v_back,lon,lat)
 
 !calculate which vertical level that w moves us to
 call near_pt(lon2d,lat2d,lon,lat,xx,yy)
-print *,'BTA nearpt 2=',xx,yy
 
 pr = par_pres
 call bilin_interp(temp(:,:,par_lev),lon2d,lat2d,xx,yy,lon,lat,temp_par)
@@ -2931,7 +2929,7 @@ call advect(-1.*(u_back+u_for)/2.,-1.*(v_back+v_for)/2.,par_lon,par_lat)
 !
 !find final parcel level
 call near_pt(lon2d,lat2d,par_lon,par_lat,xx,yy)
-print *,'BTA nearpt 3=',xx,yy
+
 call bilin_interp(temp(:,:,par_lev),lon2d,lat2d,xx,yy,par_lon,par_lat,temp_par)
 call bilin_interp(w(:,:,par_lev,1),lon2d,lat2d,xx,yy,par_lon,par_lat,w_par)
 ! call bilin_interp(temp(:,:,par_lev),lon2d,lat2d,par_lon,par_lat,temp_par)
@@ -3524,7 +3522,7 @@ do dd = 1, totdays
 	      ! While in the first time step the parcel x,y may be the same cell as the parcel was released from, as you back-track that parcel in time the x,y will change.
 	      call near_pt(lon2d,lat2d,par_lon,par_lat,x,y)
 	      !$OMP END CRITICAL (near)
-			print *,'after BTA nearpt=',x,y
+
 
 	      ! Find the water mass contribution of the new grid square, at this time	      !    
 	      !$OMP CRITICAL (new_par_q1)
@@ -3696,7 +3694,7 @@ do dd = 1, totdays
 	  
 	  
 	  end do  !mm loop
-	  STOP
+	  
       end do  !tt loop
 	  
 	  
