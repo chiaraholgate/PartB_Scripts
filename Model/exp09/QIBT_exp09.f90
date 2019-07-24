@@ -2689,7 +2689,7 @@ lat = par_lat
 
 call bilin_interp(u(:,:,par_lev,2),lon2d,lat2d,lon,lat,u_back) ! where lon2d/lat2d are the subgrids
 call bilin_interp(v(:,:,par_lev,2),lon2d,lat2d,lon,lat,v_back)
-
+print *,'BTA nearpt 1=',xx,yy
 ! THESE U,V VALUES ARE STAGGERED BUT ASSUMED TO BE AT CELL CENTRE??
 
 
@@ -2699,7 +2699,7 @@ call advect(-1.*u_back,-1.*v_back,lon,lat)
 
 !calculate which vertical level that w moves us to
 call near_pt(lon2d,lat2d,lon,lat,xx,yy)
-
+print *,'BTA nearpt 2=',xx,yy
 
 pr = par_pres
 call bilin_interp(temp(:,:,par_lev),lon2d,lat2d,lon,lat,temp_par)
@@ -2719,7 +2719,7 @@ call advect(-1.*(u_back+u_for)/2.,-1.*(v_back+v_for)/2.,par_lon,par_lat)
 !
 !find final parcel level
 call near_pt(lon2d,lat2d,par_lon,par_lat,xx,yy)
-
+print *,'BTA nearpt 3=',xx,yy
 call bilin_interp(temp(:,:,par_lev),lon2d,lat2d,par_lon,par_lat,temp_par)
 call bilin_interp(w(:,:,par_lev,1),lon2d,lat2d,par_lon,par_lat,w_par)
 call new_parcel_level_w(par_pres,pres(xx,yy,:),-1.*w_par,temp_par,par_q,lev)
@@ -3312,7 +3312,7 @@ do dd = 1, totdays
 	      ! While in the first time step the parcel x,y may be the same cell as the parcel was released from, as you back-track that parcel in time the x,y will change.
 	      call near_pt(lon2d,lat2d,par_lon,par_lat,x,y)
 	      !$OMP END CRITICAL (near)
-
+			print *,'after BTA nearpt=',x,y
 
 	      ! Find the water mass contribution of the new grid square, at this time	      !    
 	      !$OMP CRITICAL (new_par_q1)
@@ -3483,7 +3483,7 @@ do dd = 1, totdays
 
 	  
 	  end do  !mm loop
-	  
+	  STOP
       end do  !tt loop
 	  
 	  
