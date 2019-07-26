@@ -58,6 +58,7 @@
 ! The only sink for parcel moisture is precipitation.
 ! Program assumes data ranges between 0deg and 360deg. 
 ! If input data of different structure is to be used for this program, subroutines (e.g. get_data, get_data_mixtot) will need to be changed. 
+! Note that I have not checked the isentropic routines "implicit_back_traj" or potential temp routines. If you want to use that version of the program (instead of moving parcels vertically using w), then those routines will need to be thoroughly checked.
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -1930,7 +1931,7 @@ SUBROUTINE implicit_back_traj(u,v,w,temp,pbl_lev,pot_temp,pres,lon2d,lat2d, &
 				par_lon,par_lat,par_lev, &
 				par_pot_temp,par_pres,par_q,thread)
 !-------------------------------------------------------------------------------
-! SUBROUTINE UNUSED
+! SUBROUTINE UNUSED 
 
 ! Using Merrill's fully implicit isentropic technique
 ! calculate the parcels position one time step before
@@ -1965,8 +1966,9 @@ INTEGER, DIMENSION(1) :: dummy_lev
 !
 lon = par_lon
 lat = par_lat
-call bilin_interp(u(:,:,par_lev,2),lon2d,lat2d,lon,lat,u_back)
-call bilin_interp(v(:,:,par_lev,2),lon2d,lat2d,lon,lat,v_back)
+call near_pt(lon2d,lat2d,lon,lat,xx,yy)
+call bilin_interp(u(:,:,par_lev,2),lon2d,lat2d,xx,yy,lon,lat,u_back)
+call bilin_interp(v(:,:,par_lev,2),lon2d,lat2d,xx,yy,lon,lat,v_back)
 
 
 !
@@ -1982,14 +1984,14 @@ call near_pt(lon2d,lat2d,lon,lat,xx,yy)
 
 !print *,'par_lev,pbl_lev',par_lev,pbl_lev(xx,yy),xx,yy,thread
 
-call bilin_interp(temp(:,:,par_lev),lon2d,lat2d,par_lon,par_lat,temp_back)
+call bilin_interp(temp(:,:,par_lev),lon2d,lat2d,xx,yy,par_lon,par_lat,temp_back)
 
 !if (par_lev >= pbl_lev(xx,yy)) then
 if (.TRUE.) then
   call new_parcel_level_pt(par_pot_temp,pot_temp(xx,yy,:),par_lev,lev)
 else
   pr = par_pres
-  call bilin_interp(w(:,:,par_lev,2),lon2d,lat2d,lon,lat,w_back)
+  call bilin_interp(w(:,:,par_lev,2),lon2d,lat2d,xx,yy,lon,lat,w_back)
   call new_parcel_level_w(pr,pres(xx,yy,:),w_back,temp_back,par_q,lev)
 end if
 
@@ -1999,8 +2001,8 @@ end if
 !
 !get u and v at new location
 !
-call bilin_interp(u(:,:,lev,1),lon2d,lat2d,lon,lat,u_for)
-call bilin_interp(v(:,:,lev,1),lon2d,lat2d,lon,lat,v_for)
+call bilin_interp(u(:,:,lev,1),lon2d,lat2d,xx,yy,lon,lat,u_for)
+call bilin_interp(v(:,:,lev,1),lon2d,lat2d,xx,yy,lon,lat,v_for)
 
 !
 !find new location of parcel as mean location given by back and forward trajectory
@@ -2027,7 +2029,7 @@ if (.TRUE.) then
   !need to calculate the new parcel pressure
   !need to be extra careful as pot_temp may not be monotonic
   !
-  call bilin_interp(pres(:,:,lev),lon2d,lat2d,par_lon,par_lat,pr1)
+  call bilin_interp(pres(:,:,lev),lon2d,lat2d,xx,yy,par_lon,par_lat,pr1)
   if (lev == dim_k .OR. lev == 1 .OR. par_pot_temp == pot_temp(xx,yy,lev)) then
     par_pres = pr1
   else
@@ -2042,7 +2044,7 @@ if (.TRUE.) then
       else
         dummy_lev(1) = lev+1
       end if
-      call bilin_interp(pres(:,:,dummy_lev(1)),lon2d,lat2d,par_lon,par_lat,pr2)
+      call bilin_interp(pres(:,:,dummy_lev(1)),lon2d,lat2d,xx,yy,par_lon,par_lat,pr2)
       vfac = (pot_temp(xx,yy,dummy_lev(1))-par_pot_temp)/(pot_temp(xx,yy,dummy_lev(1))-pot_temp(xx,yy,lev))
       par_pres = exp((1-vfac)*log(pr2) + vfac*log(pr1))
       
@@ -2054,7 +2056,7 @@ if (.TRUE.) then
       else
         dummy_lev(1) = lev+1
       end if
-      call bilin_interp(pres(:,:,dummy_lev(1)),lon2d,lat2d,par_lon,par_lat,pr2)
+      call bilin_interp(pres(:,:,dummy_lev(1)),lon2d,lat2d,xx,yy,par_lon,par_lat,pr2)
       vfac = (pot_temp(xx,yy,lev)-par_pot_temp)/(pot_temp(xx,yy,lev)-pot_temp(xx,yy,dummy_lev(1)))
       par_pres = exp((1-vfac)*log(pr1) + vfac*log(pr2))
       
@@ -2063,25 +2065,25 @@ if (.TRUE.) then
     !
     else if (par_pot_temp > pot_temp(xx,yy,lev) .AND. par_pot_temp < pot_temp(xx,yy,lev-1)) then
     
-      call bilin_interp(pres(:,:,lev-1),lon2d,lat2d,par_lon,par_lat,pr2)
+      call bilin_interp(pres(:,:,lev-1),lon2d,lat2d,xx,yy,par_lon,par_lat,pr2)
       vfac = (pot_temp(xx,yy,lev-1)-par_pot_temp)/(pot_temp(xx,yy,lev-1)-pot_temp(xx,yy,lev))
       par_pres = exp((1-vfac)*log(pr2) + vfac*log(pr1))
       
     else if (par_pot_temp < pot_temp(xx,yy,lev) .AND. par_pot_temp > pot_temp(xx,yy,lev+1)) then
     
-      call bilin_interp(pres(:,:,lev+1),lon2d,lat2d,par_lon,par_lat,pr2)
+      call bilin_interp(pres(:,:,lev+1),lon2d,lat2d,xx,yy,par_lon,par_lat,pr2)
       vfac = (pot_temp(xx,yy,lev)-par_pot_temp)/(pot_temp(xx,yy,lev)-pot_temp(xx,yy,lev+1))
       par_pres = exp((1-vfac)*log(pr1) + vfac*log(pr2))
     
     else if (par_pot_temp > pot_temp(xx,yy,lev) .AND. par_pot_temp < pot_temp(xx,yy,lev+1)) then
     
-      call bilin_interp(pres(:,:,lev+1),lon2d,lat2d,par_lon,par_lat,pr2)
+      call bilin_interp(pres(:,:,lev+1),lon2d,lat2d,xx,yy,par_lon,par_lat,pr2)
       vfac = (pot_temp(xx,yy,lev+1)-par_pot_temp)/(pot_temp(xx,yy,lev+1)-pot_temp(xx,yy,lev))
       par_pres = exp((1-vfac)*log(pr2) + vfac*log(pr1))
       
     else if (par_pot_temp < pot_temp(xx,yy,lev) .AND. par_pot_temp > pot_temp(xx,yy,lev-1)) then
     
-      call bilin_interp(pres(:,:,lev-1),lon2d,lat2d,par_lon,par_lat,pr2)
+      call bilin_interp(pres(:,:,lev-1),lon2d,lat2d,xx,yy,par_lon,par_lat,pr2)
       vfac = (pot_temp(xx,yy,lev)-par_pot_temp)/(pot_temp(xx,yy,lev)-pot_temp(xx,yy,lev-1))
       par_pres = exp((1-vfac)*log(pr1) + vfac*log(pr2))
       
@@ -2091,20 +2093,20 @@ if (.TRUE.) then
   !print *,'lev_pt2',par_pres,par_pot_temp,pot_temp(xx,yy,lev-1:lev+1)
   
 else
-  call bilin_interp(w(:,:,par_lev,1),lon2d,lat2d,lon,lat,w_for)
+  call bilin_interp(w(:,:,par_lev,1),lon2d,lat2d,xx,yy,lon,lat,w_for)
   call new_parcel_level_w(par_pres,pres(xx,yy,:),(w_back+w_for)/2.,temp_back,par_q,lev)
 
   !need to calculate the new parcel potential temperature
-  call bilin_interp(pot_temp(:,:,lev),lon2d,lat2d,par_lon,par_lat,pt1)
+  call bilin_interp(pot_temp(:,:,lev),lon2d,lat2d,xx,yy,par_lon,par_lat,pt1)
   if (lev == dim_k .OR. lev == 1 .OR. par_pres == pres(xx,yy,lev)) then
     par_pot_temp = pt1
   else
     if (par_pres > pres(xx,yy,lev)) then
-      call bilin_interp(pot_temp(:,:,lev+1),lon2d,lat2d,par_lon,par_lat,pt2)
+      call bilin_interp(pot_temp(:,:,lev+1),lon2d,lat2d,xx,yy,par_lon,par_lat,pt2)
       vfac = (log(pres(xx,yy,lev+1))-log(par_pres))/(log(pres(xx,yy,lev+1))-log(pres(xx,yy,lev)))
       par_pot_temp = (1-vfac)*pt2 + vfac*pt1
     else
-      call bilin_interp(pot_temp(:,:,lev-1),lon2d,lat2d,par_lon,par_lat,pt2)
+      call bilin_interp(pot_temp(:,:,lev-1),lon2d,lat2d,xx,yy,par_lon,par_lat,pt2)
       vfac = (log(pres(xx,yy,lev))-log(par_pres))/(log(pres(xx,yy,lev))-log(pres(xx,yy,lev-1)))
       par_pot_temp = (1-vfac)*pt1 + vfac*pt2
     end if
