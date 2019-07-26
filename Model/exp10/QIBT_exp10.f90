@@ -18,7 +18,7 @@
 ! % Temperature: actual temperature [K], 4d.
 ! % Pressure: total pressure [Pa], 4d, where first vertical level is at the top of the model.
 ! % Surface pressure [Pa], 3d.
-! % U,V,W wind speed [m/s] components, 4d.
+! % U,V wind speed [m/s] components, 4d. If you're using vertical wind speeds, you need W [m/s] too.
 ! % Water-equivalent variables: in wrf, this is QCLD, QRAIN, QSNOW, QICE, QVAPOR [kg/kg], 4d.
 
 
@@ -89,7 +89,7 @@ INTEGER, PARAMETER :: bdy = 6   !boundary layers to ignore; trajectories will be
 
 CHARACTER(LEN=50), PARAMETER :: diri = "/g/data/hh5/tmp/w28/jpe561/back_traj/" 
 ! CHARACTER(LEN=50), PARAMETER :: diri = "/srv/ccrc/data03/z3131380/PartB/Masks/"
-!CHARACTER(LEN=100), PARAMETER :: diro = "/g/data/xc0/user/Holgate/QIBT/exp02/"
+! CHARACTER(LEN=100), PARAMETER :: diro = "/g/data/xc0/user/Holgate/QIBT/exp02/"
 CHARACTER(LEN=100) :: diro  
 CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfout/"
 CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfhrly/"  
@@ -98,32 +98,23 @@ CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/g/data/hh5/tmp/w28/jpe561/back
 
 INTEGER, PARAMETER :: numthreads = 8   !set the number of parallel openmp threads
 
-!CHARACTER(LEN=50), PARAMETER :: fdaylist = "top300precip_days_min0.5.txt"   !file containing
-!CHARACTER(LEN=50), PARAMETER :: fdaylist = "days_of_rain.txt"   !file containing list of days to do qibt on
-
 LOGICAL, PARAMETER :: peak = .FALSE.	!does the daylist indicate storm peaks (TRUE) or whole days (FALSE)
 
 LOGICAL, PARAMETER :: wshed = .TRUE. !only calculate trajectories for watershed
 
 CHARACTER(LEN=50), PARAMETER :: fwshed = "NARCliM_AUS_land_sea_mask.nc"
-								!"n_s_basin/sbasin_rotpole.nc"
-								!"mdb_rotpole.nc"
-								!"n_s_basin/moonie_rotpole.nc"
                                 !set to "" if no watershed
                                 !0 outside watershed, >0 inside
 
 REAL, PARAMETER :: min_del_q = 0.0001    !the minimum change in parcel mixing ratio (kg/kg) to be considered "real"
 
-! LOGICAL, PARAMETER :: eachParcel = .TRUE.   !output the data along the trajectory of each parcel
-!1
+
 !****************************************************
 !
 
 INTEGER :: daytsteps,totsteps,indatatsteps,datadaysteps,datatotsteps
 INTEGER :: dim_i,dim_j,dim_k,fdim_i,fdim_j,ssdim
-!INTEGER :: sday,smon,syear
 INTEGER :: mon,year,dd,totpts
-!REAL :: day
 INTEGER :: day
 
 
@@ -221,7 +212,7 @@ string_to_int = integ
 
 end FUNCTION string_to_int
 
-!******************************************************************************
+!***********************************************************************
 
 CHARACTER(LEN=50) FUNCTION int_to_string(integ)
 !----------------------------------------------
@@ -252,8 +243,7 @@ int_to_string = adjustl(str)
 
 end FUNCTION int_to_string
 
-!************************************************************************
-
+!***********************************************************************
 
 CHARACTER(LEN=50) FUNCTION real_to_string(num)
 !----------------------------------------------
@@ -285,52 +275,7 @@ real_to_string = TRIM(int_to_string(whole))//"."//TRIM(int_to_string(frac))
 
 end FUNCTION real_to_string
 
-!************************************************************************
-
-INTEGER FUNCTION days_in_month(mon,year)
-!-------------------------------------------
-! how many days in this month?
-!-----------------------------------------
-
-IMPLICIT NONE
-
-INTEGER, INTENT(IN) :: mon,year
-
-INTEGER, DIMENSION(12), PARAMETER :: months = (/31,28,31,30,31,30,31,31,30,31,30,31/)
-
-days_in_month = months(mon)
-
-if (mon == 2 .AND. MOD(year,4)==0 ) then
-  days_in_month = 29
-
-  if (MOD(year,100)==0 .AND. MOD(year,400)/=0) then
-    days_in_month = 28
-  end if
-  
-end if
-
-END  FUNCTION days_in_month
-
-!**************************************************************************
-
-INTEGER FUNCTION days_in_year(year)
-!-------------------------------------------
-! how many days in this year?
-!-----------------------------------------
-
-IMPLICIT NONE
-
-INTEGER, INTENT(IN) :: year
-
-if (MOD(year,4)==0) then
-  days_in_year = 366
-else
-  days_in_year = 365
-end if
-
-END  FUNCTION days_in_year
-
-!**********************************************************************
+!***********************************************************************
 
 INTEGER FUNCTION julian(year,mon,day)
 
@@ -343,9 +288,9 @@ julian= day-32075+1461*(year+4800+(mon-14)/12)/4+367*(mon-2-(mon-14)/12*12)/12-3
    
 END FUNCTION julian
 
-!**********************************************************************
+!***********************************************************************
 
-SUBROUTINE GREGORIAN(JD,YEAR,MONTH,DAY)!,HOUR,MINUTE,SECOND)
+SUBROUTINE GREGORIAN(JD,YEAR,MONTH,DAY)
 
 ! From http://aa.usno.navy.mil/faq/docs/JD_Formula.php
 
@@ -387,7 +332,7 @@ DAY = K
 
 END SUBROUTINE GREGORIAN
 
-!**********************************************************************
+!***********************************************************************
 
 INTEGER FUNCTION simlength(startday,startmon,startyear,endday,endmon,endyear)
 !-----------------------------------------------------
@@ -405,144 +350,14 @@ IMPLICIT NONE
 
 INTEGER, intent(in) :: startday,startmon,startyear,endday,endmon,endyear
 INTEGER :: start_jd, end_jd
-! 
-! INTEGER :: first_month,this_month,next_months,mm,yy,no_years,this_month_newyear,next_months_newyear
-! 
-! if (startyear==endyear .AND. startmon==endmon) then
-! first_month = endday-startday
-! else if (startday==1) then
-!   first_month = days_in_month(startmon,startyear)
-! else 
-!   first_month = days_in_month(startmon,startyear) - startday + 1
-! end if 
-! 
-! next_months=0
-! next_months_newyear=0
-! 
-! if (startyear==endyear) then
-!   !next_months = 0
-!   do mm = startmon+1,endmon
-!     this_month = days_in_month(mm,endyear)
-!     next_months =  next_months + this_month 
-!   end do
-! else 
-!   ! add rest of first year
-!   do mm = startmon+1,12 
-!     this_month = days_in_month(mm,startyear)
-!     next_months =  next_months + this_month 
-!   end do
-!   ! add next years
-!   no_years = endyear - startyear
-!   !next_months_newyear = 0
-!   if (no_years==1) then    
-!     do mm=1,endmon
-!       if (mm==endmon) then
-!         next_months_newyear = next_months_newyear + endday
-!       else
-!       this_month_newyear = days_in_month(mm,endyear)
-!       next_months_newyear =  next_months_newyear + this_month_newyear 
-!       end if
-!     end do
-!   else
-!     !next_months_newyear = 0
-!     do yy=1,no_years
-!       if (yy==no_years) then
-!         do mm=1,endmon
-!           if (mm==endmon) then
-!             next_months_newyear = next_months_newyear + endday
-!           else
-!             this_month_newyear = days_in_month(mm,endyear)
-!             next_months_newyear =  next_months_newyear + this_month_newyear 
-!           end if
-!         end do
-!       else
-!         next_months_newyear = next_months_newyear + days_in_year(startyear+yy)
-!       end if
-!     end do
-!   end if
-! end if
-!     
-! simlength = first_month + next_months + next_months_newyear
-! print *,simlength
 
 start_jd = julian(startyear,startmon,startday)
 end_jd = julian(endyear,endmon,endday)
 simlength = end_jd - start_jd
-!print *,'simlength=',simlength
 
 END FUNCTION simlength
-!**************************************************************************
 
-
-!**************************************************************************
-  
-SUBROUTINE days_since_start(daynum)
-!-----------------------------------------
-!number of days since the start of the simulation
-!-------------------------------------------------
-
-USE global_data
-
-IMPLICIT NONE
-
-INTEGER, INTENT(OUT) :: daynum
-
-INTEGER :: mm,yy
-
-!
-!make sure wanted start day is legit
-!
-if (year<syear.OR.(year==syear.AND.mon<smon).OR.(year==syear.AND.mon==smon.AND.day<sday)) then
-  print *,"Wanted day is before start of simulation!!!"
-  STOP
-end if
-
-!
-!now count the days
-!
-daynum = 0
-
-if (year==syear) then
-  if (smon==mon) then
-    daynum = day-sday
-  else
-    do mm = smon,mon-1
-      daynum = daynum + days_in_month(mm,year)
-    end do
-    daynum = daynum - sday + day
-  end if
-  
-else 
-
-  do mm = smon,12
-    daynum = daynum + days_in_month(mm,syear)
-  end do
-  daynum = daynum - sday
-  
-  if (year-syear>1) then
-    do yy = syear+1,year-1
-      do mm = 1,12
-        daynum = daynum + days_in_month(mm,yy)
-      end do
-    end do
-  end if
-  
-  if (mon==1) then
-    daynum = daynum + day
-  else
-    do mm = 1,mon-1
-      daynum = daynum + days_in_month(mm,yy)
-    end do
-    daynum = daynum + day
-  end if
-  
-end if
-
-print *,'L472, daynum=', daynum
-  
-END SUBROUTINE days_since_start
-
-!**********************************************************************
+!***********************************************************************
 
 SUBROUTINE day_month_year(simday)
 !----------------------------------------------
@@ -554,49 +369,10 @@ USE global_data
 
 IMPLICIT NONE
 
-!REAL,INTENT(IN) :: simday	!simulation day
 INTEGER,INTENT(IN) :: simday	!simulation day
 
 INTEGER :: jday,simdayyear,simdaymonth,simdayday
 
-! INTEGER :: days_so_far 
-! INTEGER :: mm,yr
-! 
-! 
-! days_so_far = 0
-! 
-! !calculate the no. of days in the first year
-! !testing to see if wanted day is in this year
-! do mm = smon,12
-!   days_so_far = days_so_far + days_in_month(mm,syear)
-!   
-!   if (mm==smon) days_so_far = days_so_far - sday + 1
-!   
-!   if (simday.le.days_so_far) then
-!     year = syear
-!     mon = mm
-!     day = simday - days_so_far + days_in_month(mm,syear) 
-!     return
-!   end if
-! end do
-!   
-! 
-! !loop through years to find correct month and year
-! yr = syear + 1
-! do
-!   do mm = 1,12
-!     days_so_far = days_so_far + days_in_month(mm,yr)
-!     if (simday.le.days_so_far) then
-!       year = yr
-!       mon = mm
-!       day = simday - days_so_far + days_in_month(mm,yr) - sday + 1
-!       
-!       !print *,simday,day,mon,year
-!       return
-!     end if
-!   end do
-!   yr = yr + 1
-! end do
 
 if (simday==1) then
 year=syear
@@ -614,8 +390,7 @@ end if
 
 END SUBROUTINE day_month_year
 
-!**************************************************************************
-
+!***********************************************************************
 
 SUBROUTINE get_filename(d,mn,yr,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
 !-----------------------------------------------
@@ -669,7 +444,7 @@ print *,'filename_ext_LH= ',filename_ext_LH
 
 END SUBROUTINE get_filename
 
-!**********************************************************************
+!***********************************************************************
 
 SUBROUTINE new_out_file(outncid,wvcid,wvc2id,xlocid,ylocid,dayid,opreid,daynum,lat2d,lon2d)
 !----------------------------------------------
@@ -696,43 +471,31 @@ INTEGER :: status,jdimid,idimid,gwvcdimid,latid,lonid
 if (peak) then
  print *,'we are doing peaks here!'
   if (mon<10) then
-    !status = nf90_create(TRIM(diro)//"bt."//TRIM(int_to_string(syear))//"0" &
     status = nf90_create(TRIM(diro)//"bt."//TRIM(int_to_string(year))//"0" &
-  		!//TRIM(int_to_string(smon))//"_"//TRIM(real_to_string(daynum-1))// &
-  		!//TRIM(int_to_string(smon))//"_"//TRIM(real_to_string(daynum))// &
   		//TRIM(int_to_string(mon))//"_"//TRIM(real_to_string(daynum))// &
 		".nc",nf90_clobber,outncid)
     if (status /= NF90_NOERR) call handle_err(status)
   else
-    !status = nf90_create(TRIM(diro)//"bt."//TRIM(int_to_string(syear)) &
     status = nf90_create(TRIM(diro)//"bt."//TRIM(int_to_string(year)) &
-  		!//TRIM(int_to_string(smon))//"_"//TRIM(real_to_string(daynum-1))// &
-  		!//TRIM(int_to_string(smon))//"_"//TRIM(real_to_string(daynum))// &
   		//TRIM(int_to_string(mon))//"_"//TRIM(real_to_string(daynum))// &
 		".nc",nf90_clobber,outncid)
     if (status /= NF90_NOERR) call handle_err(status)
   end if
 else
   if (mon<10) then
-    !status = nf90_create(TRIM(diro)//"bt."//TRIM(int_to_string(syear))//"0" &
     status = nf90_create(TRIM(diro)//"bt."//TRIM(int_to_string(year))//"0" &
-  		!//TRIM(int_to_string(smon))//"_"//TRIM(int_to_string(INT(daynum-0.5)))// &
-  		!//TRIM(int_to_string(smon))//"_"//TRIM(int_to_string(INT(daynum)))// &
   		//TRIM(int_to_string(mon))//"_"//TRIM(int_to_string(INT(daynum)))// &
 		".nc",nf90_clobber,outncid)
     if (status /= NF90_NOERR) call handle_err(status)
   else
-    !status = nf90_create(TRIM(diro)//"bt."//TRIM(int_to_string(syear)) &
     status = nf90_create(TRIM(diro)//"bt."//TRIM(int_to_string(year)) &
-  		!//TRIM(int_to_string(smon))//"_"//TRIM(int_to_string(INT(daynum-0.5)))// &
-  		!//TRIM(int_to_string(smon))//"_"//TRIM(int_to_string(INT(daynum)))// &
   		//TRIM(int_to_string(mon))//"_"//TRIM(int_to_string(INT(daynum)))// &
 		".nc",nf90_clobber,outncid)
     if (status /= NF90_NOERR) call handle_err(status)
   end if
 end if
 
-print *,'L720, outfile=',TRIM(diro)//"bt."//TRIM(int_to_string(year))//"0" &
+print *,'outfile=',TRIM(diro)//"bt."//TRIM(int_to_string(year))//"0" &
   		//TRIM(int_to_string(mon))//"_"//TRIM(int_to_string(INT(daynum)))// &
 		".nc"
 
@@ -825,7 +588,7 @@ if(status /= nf90_NoErr) call handle_err(status)
 
 END SUBROUTINE new_out_file
 
-!****************************************************************************
+!***********************************************************************
 
 SUBROUTINE open_netcdf_files(ncid,prencid,lhncid,psfcncid,preid,lhid,uid,vid,wid,tid,qid,ppid,pbid,pblid,psfcid,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
 !----------------------------------------------------------------
@@ -889,8 +652,7 @@ if(status /= nf90_NoErr) call handle_err(status)
 
 END SUBROUTINE open_netcdf_files
 
-!*******************************************************************
-
+!***********************************************************************
 
 SUBROUTINE get_data(precip,evap,u,v,w,t,q,qc,qt,pp,pb,pbl_hgt,psfc)
 !-----------------------------------------------
@@ -908,10 +670,10 @@ REAL, DIMENSION(SIZE(u,1),SIZE(u,2),SIZE(u,3),datadaysteps) :: temp
 
 CHARACTER(LEN=100) :: filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P
 
-INTEGER :: ncid,prencid,lhncid,psfcncid !,uncid,vncid,wncid,tncid,qncid,ppncid,pblncid
+INTEGER :: ncid,prencid,lhncid,psfcncid 
 INTEGER :: preid,lhid,uid,vid,wid,tid,qid,ppid,pbid,pblid,psfcid
 INTEGER :: sind,status,sind2,i,getsteps,getsteps2
-!REAL :: filedays
+
 
 REAL :: dayend
 
@@ -1076,11 +838,6 @@ if (totbtadays>1) then
 		if(status /= nf90_NoErr) call handle_err(status)
 		
 		print *,'L1018, Input file of previous day loaded successfully:',i,filename_ext_atm
-		!print *,'L964, :(datatotsteps-(datadaysteps*i)-1)=',(datatotsteps-(datadaysteps*i)-1)
-		!print *,'shape(precip)=',shape(precip)
-		!print *,'shape(evap)',shape(evap)
-		!print *,'shape(q)=',shape(q)
-
 
 		! close the netcdf files
 		status = nf90_close(ncid)
@@ -1160,213 +917,6 @@ if (totbtadays>1) then
 	
 else
 	print*, 'If you only want to back-track for one day, must change how input data is retrieved.'
-! 	print *,'L1036, Input file of sim day loaded successfully:',filename_ext_atm
-! 	! Open the first day input file ONLY
-! 	status = nf90_get_var(prencid, preid, precip, &
-! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 
-! 	status = nf90_get_var(lhncid, lhid, evap(:,:,(datatotsteps-datadaysteps):), &
-! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	status = nf90_get_var(ncid, qid, temp(:,:,:,(datatotsteps-datadaysteps):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	q = temp(:,:,dim_k:1:-1,:)
-! 
-! 	status = nf90_get_var(ncid, uid, temp(:,:,:,(datatotsteps-datadaysteps):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	u = temp(:,:,dim_k:1:-1,:)
-! 
-! 	status = nf90_get_var(ncid, vid, temp(:,:,:,(datatotsteps-datadaysteps):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	v = temp(:,:,dim_k:1:-1,:)
-! 
-! 	status = nf90_get_var(ncid, wid, temp(:,:,:,(datatotsteps-datadaysteps):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	w = temp(:,:,dim_k:1:-1,:)
-! 
-! 	status = nf90_get_var(ncid, tid, temp(:,:,:,(datatotsteps-datadaysteps):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	t = temp(:,:,dim_k:1:-1,:)
-! 
-! 	status = nf90_get_var(ncid, ppid, temp(:,:,:,(datatotsteps-datadaysteps):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	pp = temp(:,:,dim_k:1:-1,:)
-! 	
-! 	status = nf90_get_var(ncid, pbid, temp(:,:,:,(datatotsteps-datadaysteps):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	pb = temp(:,:,dim_k:1:-1,:)
-! 
-! 	status = nf90_get_var(ncid, pblid, pbl_hgt(:,:,(datatotsteps-datadaysteps):), &
-! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	status = nf90_get_var(psfcncid, psfcid, psfc(:,:,(datatotsteps-datadaysteps):), &
-! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 
-! 	! close the netcdf files
-! 	status = nf90_close(ncid)
-! 	status = nf90_close(prencid)
-! 	status = nf90_close(lhncid)
-! 	status = nf90_close(psfcncid)
-	
-
-! 	! Get julian day of current day 
-! 	jd_today = julian(year,mon,day)
-! 	! Get julian day for day before and open the corresponding input files
-! 	jd_before = jd_today-1	
-! 	call gregorian(jd_before,new_y,new_m,new_d)
-! 	call get_filename(new_d,new_m,new_y,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
-! 	call open_netcdf_files(ncid,prencid,lhncid,psfcncid,preid,lhid,uid,vid,wid,tid,qid,ppid,pbid,pblid,psfcid,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
-! 	print *,'L1110, sim day - 1:',filename_ext_atm
-! 	
-! 	status = nf90_get_var(lhncid, lhid, evap(:,:,(datatotsteps-(datadaysteps*2)):), &
-! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	status = nf90_get_var(ncid, qid, temp(:,:,:,(datatotsteps-(datadaysteps*2)):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	q(:,:,:,(datatotsteps-(datadaysteps*2)):) = temp(:,:,dim_k:1:-1,(datatotsteps-(datadaysteps*2)):)
-! 
-! 	status = nf90_get_var(ncid, uid, temp(:,:,:,(datatotsteps-(datadaysteps*2)):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	u(:,:,:,(datatotsteps-(datadaysteps*2)):) = temp(:,:,dim_k:1:-1,(datatotsteps-(datadaysteps*2)):)
-! 
-! 	status = nf90_get_var(ncid, vid, temp(:,:,:,(datatotsteps-(datadaysteps*2)):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	v(:,:,:,(datatotsteps-(datadaysteps*2)):) = temp(:,:,dim_k:1:-1,(datatotsteps-(datadaysteps*2)):)
-! 
-! 	status = nf90_get_var(ncid, wid, temp(:,:,:,(datatotsteps-(datadaysteps*2)):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	w(:,:,:,(datatotsteps-(datadaysteps*2)):) = temp(:,:,dim_k:1:-1,(datatotsteps-(datadaysteps*2)):)
-! 
-! 	status = nf90_get_var(ncid, tid, temp(:,:,:,(datatotsteps-(datadaysteps*2)):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	t(:,:,:,(datatotsteps-(datadaysteps*2)):) = temp(:,:,dim_k:1:-1,(datatotsteps-(datadaysteps*2)):)
-! 
-! 	status = nf90_get_var(ncid, ppid, temp(:,:,:,(datatotsteps-(datadaysteps*2)):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	pp(:,:,:,(datatotsteps-(datadaysteps*2)):) = temp(:,:,dim_k:1:-1,(datatotsteps-(datadaysteps*2)):)
-! 	
-! 	status = nf90_get_var(ncid, pbid, temp(:,:,:,(datatotsteps-(datadaysteps*2)):), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	pb(:,:,:,(datatotsteps-(datadaysteps*2)):) = temp(:,:,dim_k:1:-1,(datatotsteps-(datadaysteps*2)):)
-! 
-! 	status = nf90_get_var(ncid, pblid, pbl_hgt(:,:,(datatotsteps-(datadaysteps*2)):), &
-! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	status = nf90_get_var(psfcncid, psfcid, psfc(:,:,(datatotsteps-(datadaysteps*2)):), &
-! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	! close the netcdf files
-! 	status = nf90_close(ncid)
-! 	status = nf90_close(prencid)
-! 	status = nf90_close(lhncid)  
-! 	status = nf90_close(psfcncid)
-! 		
-! 	! Get julian day for day after (1st timestep needed) and open the corresponding input file
-! 	jd_before = jd_today+1
-! 	call gregorian(jd_before,new_y,new_m,new_d)
-! 	call get_filename(new_d,new_m,new_y,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
-! 	call open_netcdf_files(ncid,prencid,lhncid,psfcncid,preid,lhid,uid,vid,wid,tid,qid,ppid,pbid,pblid,psfcid,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
-! 	print *,'L1177, sim day + 1:',filename_ext_atm
-! 	
-! 	status = nf90_get_var(lhncid, lhid, evap(:,:,datatotsteps), &
-! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,1/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	status = nf90_get_var(ncid, qid, temp(:,:,:,1), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	q(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
-! 
-! 	status = nf90_get_var(ncid, uid, temp(:,:,:,1), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	u(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
-! 
-! 	status = nf90_get_var(ncid, vid, temp(:,:,:,1), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	v(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
-! 
-! 	status = nf90_get_var(ncid, wid, temp(:,:,:,1), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	w(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
-! 
-! 	status = nf90_get_var(ncid, tid, temp(:,:,:,1), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	t(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
-! 
-! 	status = nf90_get_var(ncid, ppid, temp(:,:,:,1), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	pp(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
-! 	
-! 	status = nf90_get_var(ncid, pbid, temp(:,:,:,1), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	pb(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
-! 
-! 	status = nf90_get_var(ncid, pblid, pbl_hgt(:,:,datatotsteps), &
-! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,1/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	status = nf90_get_var(psfcncid, psfcid, psfc(:,:,datatotsteps), &
-! 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,1/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	! close the netcdf files
-! 	status = nf90_close(ncid)
-! 	status = nf90_close(prencid)
-! 	status = nf90_close(lhncid)  
-! 	status = nf90_close(psfcncid)
-! 	
-! ! 	print *,'shape(precip)=',shape(precip)
-! ! 	print *,'shape(evap)=',shape(evap)
-! ! 	print *,'shape(pp)=',shape(pp)
-! ! 	print *,'shape(psfc)=',shape(psfc)
 
 
 end if
@@ -1382,7 +932,6 @@ qc = qt
 END SUBROUTINE get_data
 
 !***********************************************************************
-
 
 SUBROUTINE open_mixtot_netcdf_files(ncid,clwid,rnwid,snowid,iceid,filename_ext_atm)
 !----------------------------------------------------------------
@@ -1416,8 +965,7 @@ if(status /= nf90_NoErr) call handle_err(status)
 
 END SUBROUTINE open_mixtot_netcdf_files
 
-!*******************************************************************
-
+!***********************************************************************
 
 SUBROUTINE get_data_mixtot(qc,qt)
 !-----------------------------------------------
@@ -1436,10 +984,9 @@ CHARACTER(LEN=100) :: filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filenam
 REAL, DIMENSION(SIZE(qt,1),SIZE(qt,2),SIZE(qt,3),SIZE(qt,4)) :: clw,rnw,snow,ice
 REAL, DIMENSION(SIZE(qt,1),SIZE(qt,2),SIZE(qt,3),datadaysteps) :: temp
 
-INTEGER :: ncid !clwncid,rnwncid,snowncid,icencid
+INTEGER :: ncid 
 INTEGER :: clwid,rnwid,snowid,iceid
 INTEGER :: sind,status,sind2,i,getsteps,getsteps2
-!REAL :: filedays
 
 REAL :: dayend
 
@@ -1570,70 +1117,7 @@ if (totbtadays>1) then
 	
 else
 	print*, 'If you only want to back-track for one day, must change how input data is retrieved.'
-! 	! Open the first day input file ONLY
-! 	status = nf90_get_var(ncid, clwid, temp(:,:,:,:), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))    
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	clw = temp(:,:,dim_k:1:-1,:)
-! 
-! 	status = nf90_get_var(ncid, rnwid, temp(:,:,:,:), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	rnw = temp(:,:,dim_k:1:-1,:)
-! 
-! 	status = nf90_get_var(ncid, snowid, temp(:,:,:,:), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	snow = temp(:,:,dim_k:1:-1,:)
-! 
-! 	status = nf90_get_var(ncid, iceid, temp(:,:,:,:), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	ice = temp(:,:,dim_k:1:-1,:)
-! 	
-! 	! close the netcdf file
-! 	status = nf90_close(ncid)
-! 	
-! 	
-! 	! Get julian day of current day 
-! 	jd_today = julian(year,mon,day)
-! 	
-! 	! Get julian day for day after sim day (1st timestep needed) and open the corresponding input file
-! 	jd_before = jd_today+1
-! 	call gregorian(jd_before,new_y,new_m,new_d)
-! 	call get_filename(new_d,new_m,new_y,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
-! 	call open_mixtot_netcdf_files(ncid,clwid,rnwid,snowid,iceid,filename_ext_atm)
-! 
-! 	status = nf90_get_var(ncid, clwid, temp(:,:,:,1), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))    
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	clw(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
-! 
-! 	status = nf90_get_var(ncid, rnwid, temp(:,:,:,1), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	rnw(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
-! 
-! 	status = nf90_get_var(ncid, snowid, temp(:,:,:,1), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	snow(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
-! 
-! 	status = nf90_get_var(ncid, iceid, temp(:,:,:,1), &
-! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
-! 	if(status /= nf90_NoErr) call handle_err(status)
-! 	
-! 	ice(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
-! 	
-! 	! close the netcdf file
-! 	status = nf90_close(ncid)
+
 	
 end if
 
@@ -1643,7 +1127,6 @@ qt = qc
 END SUBROUTINE get_data_mixtot
 
 !***********************************************************************
-
 
 REAL FUNCTION lin_interp(var,fac)
 !---------------------------------------
@@ -1679,7 +1162,7 @@ lin_interp2D = var(:,:,1)*(1-fac) + var(:,:,2)*fac
 
 END FUNCTION lin_interp2D
 
-!************************************************************************
+!***********************************************************************
 
 FUNCTION lin_interp3D(var,fac)
 !---------------------------------------
@@ -1698,7 +1181,7 @@ lin_interp3D = var(:,:,:,1)*(1-fac) + var(:,:,:,2)*fac
 
 END FUNCTION lin_interp3D
 
-!************************************************************************
+!***********************************************************************
 
 SUBROUTINE parcel_release_time(precip,npar,par_release)
 !---------------------------------------------------
@@ -1751,14 +1234,12 @@ end do
 
 END SUBROUTINE parcel_release_time
 
-!**********************************************************************
+!***********************************************************************
 
 SUBROUTINE parcel_release_height(pw,par_lev)
 !----------------------------------------------
 ! calculate the height to release the parcel from
 ! based on precipitable water weighted random sampling
-
-! 
 !-----------------------------------------------
 
 IMPLICIT NONE
@@ -1788,7 +1269,7 @@ end do
 
 END SUBROUTINE parcel_release_height
 
-!**************************************************************************
+!***********************************************************************
 
 SUBROUTINE lin_interp_inMM5tsteps(var)
 !------------------------------------------
@@ -1811,7 +1292,7 @@ end do
 
 END SUBROUTINE lin_interp_inMM5tsteps
 
-!****************************************************************************
+!***********************************************************************
 
 SUBROUTINE calc_pw(mix,pres,surf_pres,ptop,pw)
 !------------------------------------------
@@ -1867,7 +1348,7 @@ end do
 
 END SUBROUTINE calc_pw
 
-!**************************************************************************
+!***********************************************************************
 
 SUBROUTINE calc_tpw(mix,pres,surf_pres,ptop,tpw)
 !------------------------------------------
@@ -1914,7 +1395,8 @@ end do
 
 END SUBROUTINE calc_tpw
 
-!**************************************************************************
+!***********************************************************************
+
 SUBROUTINE calc_tpw_pbl(mix,pres,surf_pres,tpw,pbl_lev)
 !------------------------------------------
 ! SUBROUTINE UNUSED
@@ -1964,8 +1446,7 @@ end do
 
 END SUBROUTINE calc_tpw_pbl
 
-!**************************************************************************
-
+!***********************************************************************
 
 SUBROUTINE calc_pot_temp(temp,pres,pot_temp)
 !------------------------------------------------
@@ -1990,7 +1471,7 @@ pot_temp = (temp+300) * ((P0/pres)**(Rd/Cp))
 
 END SUBROUTINE calc_pot_temp
 
-!**********************************************************************
+!***********************************************************************
 
 SUBROUTINE calc_actual_temp(temp,pres,act_temp)
 !------------------------------------------------
@@ -2015,8 +1496,7 @@ act_temp = (temp + 300) * ((P0/pres)**(-Rd/Cp))
 
 END SUBROUTINE calc_actual_temp
 
-!**********************************************************************
-
+!***********************************************************************
 
 SUBROUTINE calc_eq_pot_temp(mix,mixtot,temp,pres,eq_pot_temp)
 !------------------------------------------------
@@ -2067,9 +1547,7 @@ eq_pot_temp = (temp+300) * ((P0/pres)**(Rd/(Cp+Cl*mix))) * &
 
 END SUBROUTINE calc_eq_pot_temp
 
-
-!**********************************************************************
-
+!***********************************************************************
 
 SUBROUTINE calc_pbl_lev(pbl_hgt,pres,surf_pres,pbl_lev)
 !------------------------------------------------
@@ -2120,8 +1598,7 @@ end do
 
 END SUBROUTINE calc_pbl_lev
 
-
-!*************************************************************************
+!***********************************************************************
 
 SUBROUTINE all_positive_longitude(lon2d,lon2d_corrected)
 !------------------------------------------------
@@ -2141,7 +1618,7 @@ END WHERE
 
 END SUBROUTINE all_positive_longitude
 
-!**********************************************************************
+!***********************************************************************
 
 SUBROUTINE near_pt(lon2d,lat2d,lon,lat,x,y)
 !---------------------------------------------------------
@@ -2176,115 +1653,7 @@ y = loc(2)
 
 END SUBROUTINE near_pt
 
-!*************************************************************************
-
-! SUBROUTINE bilin_interp(var2d,lon2d,lat2d,par_lon,par_lat,var) !x,y,
-! !------------------------------------------------------------------
-! ! find the bi-linearly interpolated value at par_lon,par_lat
-! ! lon and lat are not regularly spaced grids
-! !------------------------------------------------------------------
-! 
-! USE global_data
-! 
-! IMPLICIT NONE
-! 
-! REAL, INTENT(IN), DIMENSION(:,:) :: var2d,lon2d,lat2d
-! REAL, INTENT(IN) :: par_lon,par_lat
-! REAL, INTENT(OUT) :: var
-! 
-! REAL :: fac,t,u
-! INTEGER :: xx,yy,xbdy,ybdy!,x,y
-! LOGICAL :: changex,changey
-! 
-! changex = .FALSE.
-! changey = .FALSE.
-! xbdy = 0
-! ybdy = 0
-! 
-! ! Find what xx,yy is in the subgrid
-! call near_pt(lon2d,lat2d,par_lon,par_lat,xx,yy)
-! ! Instead of calling near_pt every time you do bilin_interp, just give bilin_interp the xx and yy
-! ! xx=x
-! ! yy=y
-! 
-! !
-! !check if we are currently exactly on a grid pt
-! ! ..where lon/lat2d are the subgrids
-! ! The initial call to bilin_interp in the implicit_back_traj_w will have the parcel on a grid point, as this is the initial location of the parcel when released (par_lat,par_lon) before entering the back_traj routine. Parcel lat,lon may not be on a cell centre after the parcel has been advected. 
-! If (lon2d(xx,yy)==par_lon.AND.lat2d(xx,yy)==par_lat) then
-!   var = var2d(xx,yy)
-!   RETURN
-! end if
-! 
-! !
-! !get indices of closest grid value to south and west
-! !be careful of boundary
-! ! If you are in the bottom corner of the subgrid:
-! if (xx==1) xbdy = -1
-! if (yy==1) ybdy = -1
-! 
-! ! If you're not in the bottom corner of the subgrid:
-! ! If the lon of the nearest cell point is > advected parcel lon, take x position as xx-1.
-! if (lon2d(xx,yy)>par_lon.AND.xbdy>-1) then
-!   changex = .TRUE.
-! end if
-! ! If the lat of the nearest cell point is > advected parcel lat, take y position as yy-1.
-! if (lat2d(xx,yy)>par_lat.AND.ybdy>-1) then
-!   changey = .TRUE.
-! end if
-! 
-! ! What about case where xx,yy need to increase, not decrease? 
-! 
-! 
-! if (changex) then
-!   xx = xx-1
-! end if
-! if (changey) then
-!   yy = yy-1
-! end if
-! 
-! 
-! !
-! !if we are at the top or right boundary
-! !
-! if (xx==ssdim) then
-!   xbdy = 1
-! end if
-! if (yy==ssdim) then
-!   ybdy = 1
-! end if
-! 
-! 
-! !
-! !check to see if point in inside lower and left boundaries
-! !
-! if (xbdy<0.AND.lon2d(xx,yy)<par_lon) xbdy = 0
-! if (ybdy<0.AND.lat2d(xx,yy)<par_lat) ybdy = 0
-! 
-! !
-! !calculate the t and u weights
-! !account for possibility of being outside the boundaries
-! !even though this should never happen
-! !if outside a boundary use the value at the boundary
-! !
-! if ((xbdy/=0.AND.ybdy/=0)) then
-!   var = var2d(xx,yy)  
-! else if (xbdy/=0) then
-!   fac = (par_lat - lat2d(xx,yy))/(lat2d(xx,yy+1)-lat2d(xx,yy))
-!   var = lin_interp(var2d(xx,yy:yy+1),fac)
-! else if (ybdy/=0) then
-!   fac = (par_lon - lon2d(xx,yy))/(lon2d(xx+1,yy)-lon2d(xx,yy))
-!   var = lin_interp(var2d(xx:xx+1,yy),fac)
-! else
-!   t = (par_lon - lon2d(xx,yy))/(lon2d(xx+1,yy)-lon2d(xx,yy))
-!   u = (par_lat - lat2d(xx,yy))/(lat2d(xx,yy+1)-lat2d(xx,yy))
-!   var = (1-t)*(1-u)*var2d(xx,yy) + (1-t)*u*var2d(xx,yy+1) + &
-!          t*u*var2d(xx+1,yy+1) + t*(1-u)*var2d(xx+1,yy)
-! end if	 
-! 
-!   
-! 
-! END SUBROUTINE bilin_interp
+!***********************************************************************
 
 SUBROUTINE bilin_interp(var2d,lon2d,lat2d,x,y,par_lon,par_lat,var) 
 !------------------------------------------------------------------
@@ -2332,11 +1701,11 @@ if (xx==1) xbdy = -1
 if (yy==1) ybdy = -1
 
 ! If you're not in the bottom corner of the subgrid:
-! If the lon of the nearest cell point is > advected parcel lon, take x position as xx-1.
+! If the nearest cell point is further east than the advected parcel, take x position as xx-1, i.e. move it west.
 if (lon2d(xx,yy)>par_lon.AND.xbdy>-1) then
   changex = .TRUE.
 end if
-! If the lat of the nearest cell point is > advected parcel lat, take y position as yy-1.
+! If the nearest cell point is further north than the advected parcel, take y position as yy-1, i.e. move it south.
 if (lat2d(xx,yy)>par_lat.AND.ybdy>-1) then
   changey = .TRUE.
 end if
@@ -2394,7 +1763,51 @@ end if
 
 END SUBROUTINE bilin_interp
 
-!**************************************************************************************
+!***********************************************************************
+
+SUBROUTINE new_parcel_level_w(par_pres,pres,w,temp,mix,lev)
+!-------------------------------------------------------------------------
+!calculate the new parcel level given w at this location
+!--------------------------------------------------------------------------
+
+USE global_data
+
+IMPLICIT NONE
+
+REAL, INTENT(IN) :: w,temp,mix
+REAL, INTENT(IN), DIMENSION(:) :: pres
+REAL, INTENT(INOUT) :: par_pres
+INTEGER, INTENT(OUT) :: lev
+
+INTEGER, DIMENSION(1) :: dummy_lev
+
+!
+! Here I use the hydrostatic eqn to calculate the change in pressure given w.
+! deltaP = rho*g*deltaz when in hydrostatic equilibrium
+! Note that "(1+0.61*mix)*temp" is the virtual temp. See p80 Wallace & Hobbs.
+!
+
+par_pres = par_pres + -1.*(par_pres/(Rd*(1+0.61*mix)*temp))*g*w*tstep*60
+
+
+! Find the model level where the difference in pressure between the parcel
+! and the atmosphere is the smallest, i.e. which height in pres does the 
+! smallest difference occur, where pres dims are (lat,lon,height).
+dummy_lev = MINLOC(ABS(pres - par_pres))
+
+lev = dummy_lev(1)
+
+!if the parcel is below the lowest model level then set it to the lowest level
+if (par_pres > MAXVAL(pres)) par_pres = MAXVAL(pres)
+
+! if (lev==0) then
+!   print *,'par_lev_w - pres_dis',(pres - par_pres),temp,w
+!   print *,'par_lev_w -',par_pres,pres
+! end if
+
+END SUBROUTINE new_parcel_level_w
+
+!***********************************************************************
 
 SUBROUTINE new_parcel_level_pt(par_pot_temp,pot_temp,par_lev,lev)
 !-------------------------------------------------------------------------
@@ -2480,54 +1893,7 @@ end if
 
 END SUBROUTINE new_parcel_level_pt
 
-
-
-!**************************************************************************************
-
-SUBROUTINE new_parcel_level_w(par_pres,pres,w,temp,mix,lev)
-!-------------------------------------------------------------------------
-!calculate the new parcel level given w at this location
-!--------------------------------------------------------------------------
-
-USE global_data
-
-IMPLICIT NONE
-
-REAL, INTENT(IN) :: w,temp,mix
-REAL, INTENT(IN), DIMENSION(:) :: pres
-REAL, INTENT(INOUT) :: par_pres
-INTEGER, INTENT(OUT) :: lev
-
-INTEGER, DIMENSION(1) :: dummy_lev
-
-!
-! Here I use the hydrostatic eqn to calculate the change in pressure given w.
-! deltaP = rho*g*deltaz when in hydrostatic equilibrium
-! Note that "(1+0.61*mix)*temp" is the virtual temp. See p80 Wallace & Hobbs.
-!
-
-par_pres = par_pres + -1.*(par_pres/(Rd*(1+0.61*mix)*temp))*g*w*tstep*60
-
-
-! Find the model level where the difference in pressure between the parcel
-! and the atmosphere is the smallest, i.e. which height in pres does the 
-! smallest difference occur, where pres dims are (lat,lon,height).
-dummy_lev = MINLOC(ABS(pres - par_pres))
-
-lev = dummy_lev(1)
-
-!if the parcel is below the lowest model level then set it to the lowest level
-if (par_pres > MAXVAL(pres)) par_pres = MAXVAL(pres)
-
-! if (lev==0) then
-!   print *,'par_lev_w - pres_dis',(pres - par_pres),temp,w
-!   print *,'par_lev_w -',par_pres,pres
-! end if
-
-END SUBROUTINE new_parcel_level_w
-
-
-!***************************************************************************************
+!***********************************************************************
 
 SUBROUTINE advect(u,v,lon,lat)
 !-----------------------------------------------
@@ -2558,301 +1924,206 @@ lon = lon + u*tstep*60/(cos(lat*pi/180)*deg_dist*1000)
 
 END SUBROUTINE advect
 
-!***********************************************************************************
+!***********************************************************************
+
+SUBROUTINE implicit_back_traj(u,v,w,temp,pbl_lev,pot_temp,pres,lon2d,lat2d, &
+				par_lon,par_lat,par_lev, &
+				par_pot_temp,par_pres,par_q,thread)
+!-------------------------------------------------------------------------------
+! SUBROUTINE UNUSED
+
+! Using Merrill's fully implicit isentropic technique
+! calculate the parcels position one time step before
+!
+!u,v,w should only have 2 time steps in them
+!pot_temp & pres should only have the end time step
+!--------------------------------------------------------------------------
+
+USE global_data
+
+IMPLICIT NONE
+
+REAL, INTENT(IN), DIMENSION(:,:,:,:) :: u,v,w
+REAL, INTENT(IN), DIMENSION(:,:,:) :: pot_temp,pres,temp
+REAL, INTENT(IN), DIMENSION(:,:) :: lon2d,lat2d
+INTEGER, INTENT(IN), DIMENSION(:,:) :: pbl_lev
+REAL, INTENT(INOUT) :: par_lon,par_lat,par_pot_temp,par_pres
+REAL, INTENT(IN) :: par_q
+INTEGER, INTENT(INOUT) :: par_lev
+INTEGER, INTENT(IN) :: thread
+
+INTEGER :: xx,yy,ll,lev
+REAL :: lon,lat,u_back,v_back,w_back,temp_back,u_for,v_for,w_for,pr
+REAL :: pt1,pt2,vfac,pr1,pr2
+INTEGER, DIMENSION(1) :: dummy_lev
 
 
-! SUBROUTINE implicit_back_traj(u,v,w,temp,pbl_lev,pot_temp,pres,lon2d,lat2d, &
-! 				par_lon,par_lat,par_lev, &
-! 				par_pot_temp,par_pres,par_q,thread)
-! !-------------------------------------------------------------------------------
-! ! SUBROUTINE UNUSED
-! 
-! ! Using Merrill's fully implicit isentropic technique
-! ! calculate the parcels position one time step before
-! !
-! !u,v,w should only have 2 time steps in them
-! !pot_temp & pres should only have the end time step
-! !--------------------------------------------------------------------------
-! 
-! USE global_data
-! 
-! IMPLICIT NONE
-! 
-! REAL, INTENT(IN), DIMENSION(:,:,:,:) :: u,v,w
-! REAL, INTENT(IN), DIMENSION(:,:,:) :: pot_temp,pres,temp
-! REAL, INTENT(IN), DIMENSION(:,:) :: lon2d,lat2d
-! INTEGER, INTENT(IN), DIMENSION(:,:) :: pbl_lev
-! REAL, INTENT(INOUT) :: par_lon,par_lat,par_pot_temp,par_pres
-! REAL, INTENT(IN) :: par_q
-! INTEGER, INTENT(INOUT) :: par_lev
-! INTEGER, INTENT(IN) :: thread
-! 
-! INTEGER :: xx,yy,ll,lev
-! REAL :: lon,lat,u_back,v_back,w_back,temp_back,u_for,v_for,w_for,pr
-! REAL :: pt1,pt2,vfac,pr1,pr2
-! INTEGER, DIMENSION(1) :: dummy_lev
-! 
-! 
-! !print *,'1st',par_pres,par_pot_temp,par_lon,par_lat,par_lev,thread
-! 
-! !
-! !get u and v at parcel location
-! !
-! lon = par_lon
-! lat = par_lat
-! call bilin_interp(u(:,:,par_lev,2),lon2d,lat2d,lon,lat,u_back)
-! call bilin_interp(v(:,:,par_lev,2),lon2d,lat2d,lon,lat,v_back)
-! 
-! 
-! !
-! !find lat and lon after advecting back in time
-! !
-! call advect(-1.*u_back,-1.*v_back,lon,lat)
-! 
-! !
-! !calculate which vertical level has correct potential temperature 
-! !at new location or that w moves us to
-! !
-! call near_pt(lon2d,lat2d,lon,lat,xx,yy)
-! 
-! !print *,'par_lev,pbl_lev',par_lev,pbl_lev(xx,yy),xx,yy,thread
-! 
-! call bilin_interp(temp(:,:,par_lev),lon2d,lat2d,par_lon,par_lat,temp_back)
-! 
-! !if (par_lev >= pbl_lev(xx,yy)) then
-! if (.TRUE.) then
-!   call new_parcel_level_pt(par_pot_temp,pot_temp(xx,yy,:),par_lev,lev)
-! else
-!   pr = par_pres
-!   call bilin_interp(w(:,:,par_lev,2),lon2d,lat2d,lon,lat,w_back)
-!   call new_parcel_level_w(pr,pres(xx,yy,:),w_back,temp_back,par_q,lev)
-! end if
-! 
-! !print *,'2nd',par_pres,par_pot_temp,par_lon,par_lat,par_lev,thread
-! 
-! 
-! !
-! !get u and v at new location
-! !
-! call bilin_interp(u(:,:,lev,1),lon2d,lat2d,lon,lat,u_for)
-! call bilin_interp(v(:,:,lev,1),lon2d,lat2d,lon,lat,v_for)
-! 
-! !
-! !find new location of parcel as mean location given by back and forward trajectory
-! !
-! call advect(-1.*(u_back+u_for)/2.,-1.*(v_back+v_for)/2.,par_lon,par_lat)
-! 
-! 
-! !
-! !find final parcel potential temperature and level
-! !
-! call near_pt(lon2d,lat2d,par_lon,par_lat,xx,yy)
-! 
-! !print *,'par_lev,pbl_lev',par_lev,pbl_lev(xx,yy),xx,yy,thread
-! 
-! 
-! !if (par_lev >= pbl_lev(xx,yy)) then
-! if (.TRUE.) then
-!   call new_parcel_level_pt(par_pot_temp,pot_temp(xx,yy,:),par_lev,lev)
-!   
-!   !print *,'lev_pt1',par_pres,par_pot_temp,pot_temp(xx,yy,lev-1:lev+1)
-!   
-!   
-!   !
-!   !need to calculate the new parcel pressure
-!   !need to be extra careful as pot_temp may not be monotonic
-!   !
-!   call bilin_interp(pres(:,:,lev),lon2d,lat2d,par_lon,par_lat,pr1)
-!   if (lev == dim_k .OR. lev == 1 .OR. par_pot_temp == pot_temp(xx,yy,lev)) then
-!     par_pres = pr1
-!   else
-!     !
-!     !in case this level is a min or max in pot_temp
-!     !
-!     if (par_pot_temp>pot_temp(xx,yy,lev).AND.par_pot_temp<pot_temp(xx,yy,lev-1).AND.par_pot_temp<pot_temp(xx,yy,lev+1)) then
-!     
-!       dummy_lev = MINLOC(ABS(par_pres - pres(xx,yy,lev-1:lev+1:2)))
-!       if (dummy_lev(1)==1) then
-!         dummy_lev(1) = lev-1
-!       else
-!         dummy_lev(1) = lev+1
-!       end if
-!       call bilin_interp(pres(:,:,dummy_lev(1)),lon2d,lat2d,par_lon,par_lat,pr2)
-!       vfac = (pot_temp(xx,yy,dummy_lev(1))-par_pot_temp)/(pot_temp(xx,yy,dummy_lev(1))-pot_temp(xx,yy,lev))
-!       par_pres = exp((1-vfac)*log(pr2) + vfac*log(pr1))
-!       
-!     else if (par_pot_temp<pot_temp(xx,yy,lev).AND.par_pot_temp>pot_temp(xx,yy,lev-1).AND.par_pot_temp>pot_temp(xx,yy,lev+1)) then
-!     
-!       dummy_lev = MINLOC(ABS(par_pres - pres(xx,yy,lev-1:lev+1:2)))
-!       if (dummy_lev(1)==1) then
-!         dummy_lev(1) = lev-1
-!       else
-!         dummy_lev(1) = lev+1
-!       end if
-!       call bilin_interp(pres(:,:,dummy_lev(1)),lon2d,lat2d,par_lon,par_lat,pr2)
-!       vfac = (pot_temp(xx,yy,lev)-par_pot_temp)/(pot_temp(xx,yy,lev)-pot_temp(xx,yy,dummy_lev(1)))
-!       par_pres = exp((1-vfac)*log(pr1) + vfac*log(pr2))
-!       
-!     !
-!     !in other cases
-!     !
-!     else if (par_pot_temp > pot_temp(xx,yy,lev) .AND. par_pot_temp < pot_temp(xx,yy,lev-1)) then
-!     
-!       call bilin_interp(pres(:,:,lev-1),lon2d,lat2d,par_lon,par_lat,pr2)
-!       vfac = (pot_temp(xx,yy,lev-1)-par_pot_temp)/(pot_temp(xx,yy,lev-1)-pot_temp(xx,yy,lev))
-!       par_pres = exp((1-vfac)*log(pr2) + vfac*log(pr1))
-!       
-!     else if (par_pot_temp < pot_temp(xx,yy,lev) .AND. par_pot_temp > pot_temp(xx,yy,lev+1)) then
-!     
-!       call bilin_interp(pres(:,:,lev+1),lon2d,lat2d,par_lon,par_lat,pr2)
-!       vfac = (pot_temp(xx,yy,lev)-par_pot_temp)/(pot_temp(xx,yy,lev)-pot_temp(xx,yy,lev+1))
-!       par_pres = exp((1-vfac)*log(pr1) + vfac*log(pr2))
-!     
-!     else if (par_pot_temp > pot_temp(xx,yy,lev) .AND. par_pot_temp < pot_temp(xx,yy,lev+1)) then
-!     
-!       call bilin_interp(pres(:,:,lev+1),lon2d,lat2d,par_lon,par_lat,pr2)
-!       vfac = (pot_temp(xx,yy,lev+1)-par_pot_temp)/(pot_temp(xx,yy,lev+1)-pot_temp(xx,yy,lev))
-!       par_pres = exp((1-vfac)*log(pr2) + vfac*log(pr1))
-!       
-!     else if (par_pot_temp < pot_temp(xx,yy,lev) .AND. par_pot_temp > pot_temp(xx,yy,lev-1)) then
-!     
-!       call bilin_interp(pres(:,:,lev-1),lon2d,lat2d,par_lon,par_lat,pr2)
-!       vfac = (pot_temp(xx,yy,lev)-par_pot_temp)/(pot_temp(xx,yy,lev)-pot_temp(xx,yy,lev-1))
-!       par_pres = exp((1-vfac)*log(pr1) + vfac*log(pr2))
-!       
-!     end if
-!   end if
-!   
-!   !print *,'lev_pt2',par_pres,par_pot_temp,pot_temp(xx,yy,lev-1:lev+1)
-!   
-! else
-!   call bilin_interp(w(:,:,par_lev,1),lon2d,lat2d,lon,lat,w_for)
-!   call new_parcel_level_w(par_pres,pres(xx,yy,:),(w_back+w_for)/2.,temp_back,par_q,lev)
-! 
-!   !need to calculate the new parcel potential temperature
-!   call bilin_interp(pot_temp(:,:,lev),lon2d,lat2d,par_lon,par_lat,pt1)
-!   if (lev == dim_k .OR. lev == 1 .OR. par_pres == pres(xx,yy,lev)) then
-!     par_pot_temp = pt1
-!   else
-!     if (par_pres > pres(xx,yy,lev)) then
-!       call bilin_interp(pot_temp(:,:,lev+1),lon2d,lat2d,par_lon,par_lat,pt2)
-!       vfac = (log(pres(xx,yy,lev+1))-log(par_pres))/(log(pres(xx,yy,lev+1))-log(pres(xx,yy,lev)))
-!       par_pot_temp = (1-vfac)*pt2 + vfac*pt1
-!     else
-!       call bilin_interp(pot_temp(:,:,lev-1),lon2d,lat2d,par_lon,par_lat,pt2)
-!       vfac = (log(pres(xx,yy,lev))-log(par_pres))/(log(pres(xx,yy,lev))-log(pres(xx,yy,lev-1)))
-!       par_pot_temp = (1-vfac)*pt1 + vfac*pt2
-!     end if
-!   end if
-! end if
-! 
-! 
-! if (lev==0) then
-!   print *,'L2389, ',par_lev,lev,par_pres,par_pot_temp,temp_back,thread
-!   STOP
-! end if
-! 
-! par_lev = lev
-! 
-! 
-! 
-! END SUBROUTINE implicit_back_traj
-!***********************************************************************************
+!print *,'1st',par_pres,par_pot_temp,par_lon,par_lat,par_lev,thread
+
+!
+!get u and v at parcel location
+!
+lon = par_lon
+lat = par_lat
+call bilin_interp(u(:,:,par_lev,2),lon2d,lat2d,lon,lat,u_back)
+call bilin_interp(v(:,:,par_lev,2),lon2d,lat2d,lon,lat,v_back)
 
 
-! SUBROUTINE implicit_back_traj_w(u,v,w,temp,pres,lon2d,lat2d, &
-! 				par_lon,par_lat,par_lev, &
-! 				par_pres,par_q,thread)
-! !-------------------------------------------------------------------------------
-! ! Using Merrill's fully implicit  technique
-! ! calculate the parcels position one time step before
-! !
-! ! u,v,w should only have 2 time steps in them
-! ! pres should only have the end time step
-! 
-! ! Output parcel lat,lon, height and pressure
-! !--------------------------------------------------------------------------
-! 
-! USE global_data
-! 
-! IMPLICIT NONE
-! 
-! REAL, INTENT(IN), DIMENSION(:,:,:,:) :: u,v,w
-! REAL, INTENT(IN), DIMENSION(:,:,:) :: pres,temp
-! REAL, INTENT(IN), DIMENSION(:,:) :: lon2d,lat2d
-! !INTEGER, INTENT(IN), DIMENSION(:,:) :: pbl_lev
-! REAL, INTENT(INOUT) :: par_lon,par_lat,par_pres
-! REAL, INTENT(IN) :: par_q
-! INTEGER, INTENT(INOUT) :: par_lev
-! INTEGER, INTENT(IN) :: thread
-! 
-! INTEGER :: xx,yy,lev !ll
-! REAL :: lon,lat,u_back,v_back,w_par,temp_par,u_for,v_for,pr
-! !REAL :: pt1,pt2,vfac,pr1,pr2
-! !INTEGER, DIMENSION(1) :: dummy_lev
-! 
-! 
-! ! Get u and v at parcel location, by interpolating in time (current and previous parcel timestep), and space (parcel lat/lon and lat/lon of the nearest grid point).
-! lon = par_lon
-! lat = par_lat
-! 
-! !call near_pt(lon2d,lat2d,lon,lat,xx,yy)
-! 
-! ! call bilin_interp(u(:,:,par_lev,2),lon2d,lat2d,xx,yy,lon,lat,u_back) ! where lon2d/lat2d are the subgrids
-! ! call bilin_interp(v(:,:,par_lev,2),lon2d,lat2d,xx,yy,lon,lat,v_back)
-! call bilin_interp(u(:,:,par_lev,2),lon2d,lat2d,lon,lat,u_back) ! where lon2d/lat2d are the subgrids
-! call bilin_interp(v(:,:,par_lev,2),lon2d,lat2d,lon,lat,v_back)
-! 
-! ! THESE U,V VALUES ARE STAGGERED BUT ASSUMED TO BE AT CELL CENTRE??
-! 
-! 
-! !find lat and lon after advecting back in time. Reverse the wind directions (make negative) as you're going back in time.
-! call advect(-1.*u_back,-1.*v_back,lon,lat)
-! 
-! 
-! !calculate which vertical level that w moves us to
-! call near_pt(lon2d,lat2d,lon,lat,xx,yy)
-! 
-! 
-! pr = par_pres
-! ! call bilin_interp(temp(:,:,par_lev),lon2d,lat2d,xx,yy,lon,lat,temp_par)
-! ! call bilin_interp(w(:,:,par_lev,2),lon2d,lat2d,xx,yy,lon,lat,w_par)
-! call bilin_interp(temp(:,:,par_lev),lon2d,lat2d,lon,lat,temp_par)
-! call bilin_interp(w(:,:,par_lev,2),lon2d,lat2d,lon,lat,w_par)
-! ! Reverse vertical wind direction as you're going back in time. 
-! call new_parcel_level_w(pr,pres(xx,yy,:),-1.*w_par,temp_par,par_q,lev)
-! 
-! 
-! !get u and v at new lon/lat found using first advect call above
-! ! call bilin_interp(u(:,:,lev,1),lon2d,lat2d,xx,yy,lon,lat,u_for)
-! ! call bilin_interp(v(:,:,lev,1),lon2d,lat2d,xx,yy,lon,lat,v_for)
-! call bilin_interp(u(:,:,lev,1),lon2d,lat2d,lon,lat,u_for)
-! call bilin_interp(v(:,:,lev,1),lon2d,lat2d,lon,lat,v_for)
-! 
-! !
-! !find new location of parcel as mean location given by back and forward trajectory
-! call advect(-1.*(u_back+u_for)/2.,-1.*(v_back+v_for)/2.,par_lon,par_lat)
-! 
-! !
-! !find final parcel level
-! call near_pt(lon2d,lat2d,par_lon,par_lat,xx,yy)
-! 
-! ! call bilin_interp(temp(:,:,par_lev),lon2d,lat2d,xx,yy,par_lon,par_lat,temp_par)
-! ! call bilin_interp(w(:,:,par_lev,1),lon2d,lat2d,xx,yy,par_lon,par_lat,w_par)
-! call bilin_interp(temp(:,:,par_lev),lon2d,lat2d,par_lon,par_lat,temp_par)
-! call bilin_interp(w(:,:,par_lev,1),lon2d,lat2d,par_lon,par_lat,w_par)
-! call new_parcel_level_w(par_pres,pres(xx,yy,:),-1.*w_par,temp_par,par_q,lev)
-! 
-! 
-! if (lev==0) then
-!   !print *,'parcel lev=0',par_lev,lev,par_pres,temp_par,thread
-!   STOP
-! end if
-! 
-! par_lev = lev
-! 
-! 
-! END SUBROUTINE implicit_back_traj_w
+!
+!find lat and lon after advecting back in time
+!
+call advect(-1.*u_back,-1.*v_back,lon,lat)
+
+!
+!calculate which vertical level has correct potential temperature 
+!at new location or that w moves us to
+!
+call near_pt(lon2d,lat2d,lon,lat,xx,yy)
+
+!print *,'par_lev,pbl_lev',par_lev,pbl_lev(xx,yy),xx,yy,thread
+
+call bilin_interp(temp(:,:,par_lev),lon2d,lat2d,par_lon,par_lat,temp_back)
+
+!if (par_lev >= pbl_lev(xx,yy)) then
+if (.TRUE.) then
+  call new_parcel_level_pt(par_pot_temp,pot_temp(xx,yy,:),par_lev,lev)
+else
+  pr = par_pres
+  call bilin_interp(w(:,:,par_lev,2),lon2d,lat2d,lon,lat,w_back)
+  call new_parcel_level_w(pr,pres(xx,yy,:),w_back,temp_back,par_q,lev)
+end if
+
+!print *,'2nd',par_pres,par_pot_temp,par_lon,par_lat,par_lev,thread
+
+
+!
+!get u and v at new location
+!
+call bilin_interp(u(:,:,lev,1),lon2d,lat2d,lon,lat,u_for)
+call bilin_interp(v(:,:,lev,1),lon2d,lat2d,lon,lat,v_for)
+
+!
+!find new location of parcel as mean location given by back and forward trajectory
+!
+call advect(-1.*(u_back+u_for)/2.,-1.*(v_back+v_for)/2.,par_lon,par_lat)
+
+
+!
+!find final parcel potential temperature and level
+!
+call near_pt(lon2d,lat2d,par_lon,par_lat,xx,yy)
+
+!print *,'par_lev,pbl_lev',par_lev,pbl_lev(xx,yy),xx,yy,thread
+
+
+!if (par_lev >= pbl_lev(xx,yy)) then
+if (.TRUE.) then
+  call new_parcel_level_pt(par_pot_temp,pot_temp(xx,yy,:),par_lev,lev)
+  
+  !print *,'lev_pt1',par_pres,par_pot_temp,pot_temp(xx,yy,lev-1:lev+1)
+  
+  
+  !
+  !need to calculate the new parcel pressure
+  !need to be extra careful as pot_temp may not be monotonic
+  !
+  call bilin_interp(pres(:,:,lev),lon2d,lat2d,par_lon,par_lat,pr1)
+  if (lev == dim_k .OR. lev == 1 .OR. par_pot_temp == pot_temp(xx,yy,lev)) then
+    par_pres = pr1
+  else
+    !
+    !in case this level is a min or max in pot_temp
+    !
+    if (par_pot_temp>pot_temp(xx,yy,lev).AND.par_pot_temp<pot_temp(xx,yy,lev-1).AND.par_pot_temp<pot_temp(xx,yy,lev+1)) then
+    
+      dummy_lev = MINLOC(ABS(par_pres - pres(xx,yy,lev-1:lev+1:2)))
+      if (dummy_lev(1)==1) then
+        dummy_lev(1) = lev-1
+      else
+        dummy_lev(1) = lev+1
+      end if
+      call bilin_interp(pres(:,:,dummy_lev(1)),lon2d,lat2d,par_lon,par_lat,pr2)
+      vfac = (pot_temp(xx,yy,dummy_lev(1))-par_pot_temp)/(pot_temp(xx,yy,dummy_lev(1))-pot_temp(xx,yy,lev))
+      par_pres = exp((1-vfac)*log(pr2) + vfac*log(pr1))
+      
+    else if (par_pot_temp<pot_temp(xx,yy,lev).AND.par_pot_temp>pot_temp(xx,yy,lev-1).AND.par_pot_temp>pot_temp(xx,yy,lev+1)) then
+    
+      dummy_lev = MINLOC(ABS(par_pres - pres(xx,yy,lev-1:lev+1:2)))
+      if (dummy_lev(1)==1) then
+        dummy_lev(1) = lev-1
+      else
+        dummy_lev(1) = lev+1
+      end if
+      call bilin_interp(pres(:,:,dummy_lev(1)),lon2d,lat2d,par_lon,par_lat,pr2)
+      vfac = (pot_temp(xx,yy,lev)-par_pot_temp)/(pot_temp(xx,yy,lev)-pot_temp(xx,yy,dummy_lev(1)))
+      par_pres = exp((1-vfac)*log(pr1) + vfac*log(pr2))
+      
+    !
+    !in other cases
+    !
+    else if (par_pot_temp > pot_temp(xx,yy,lev) .AND. par_pot_temp < pot_temp(xx,yy,lev-1)) then
+    
+      call bilin_interp(pres(:,:,lev-1),lon2d,lat2d,par_lon,par_lat,pr2)
+      vfac = (pot_temp(xx,yy,lev-1)-par_pot_temp)/(pot_temp(xx,yy,lev-1)-pot_temp(xx,yy,lev))
+      par_pres = exp((1-vfac)*log(pr2) + vfac*log(pr1))
+      
+    else if (par_pot_temp < pot_temp(xx,yy,lev) .AND. par_pot_temp > pot_temp(xx,yy,lev+1)) then
+    
+      call bilin_interp(pres(:,:,lev+1),lon2d,lat2d,par_lon,par_lat,pr2)
+      vfac = (pot_temp(xx,yy,lev)-par_pot_temp)/(pot_temp(xx,yy,lev)-pot_temp(xx,yy,lev+1))
+      par_pres = exp((1-vfac)*log(pr1) + vfac*log(pr2))
+    
+    else if (par_pot_temp > pot_temp(xx,yy,lev) .AND. par_pot_temp < pot_temp(xx,yy,lev+1)) then
+    
+      call bilin_interp(pres(:,:,lev+1),lon2d,lat2d,par_lon,par_lat,pr2)
+      vfac = (pot_temp(xx,yy,lev+1)-par_pot_temp)/(pot_temp(xx,yy,lev+1)-pot_temp(xx,yy,lev))
+      par_pres = exp((1-vfac)*log(pr2) + vfac*log(pr1))
+      
+    else if (par_pot_temp < pot_temp(xx,yy,lev) .AND. par_pot_temp > pot_temp(xx,yy,lev-1)) then
+    
+      call bilin_interp(pres(:,:,lev-1),lon2d,lat2d,par_lon,par_lat,pr2)
+      vfac = (pot_temp(xx,yy,lev)-par_pot_temp)/(pot_temp(xx,yy,lev)-pot_temp(xx,yy,lev-1))
+      par_pres = exp((1-vfac)*log(pr1) + vfac*log(pr2))
+      
+    end if
+  end if
+  
+  !print *,'lev_pt2',par_pres,par_pot_temp,pot_temp(xx,yy,lev-1:lev+1)
+  
+else
+  call bilin_interp(w(:,:,par_lev,1),lon2d,lat2d,lon,lat,w_for)
+  call new_parcel_level_w(par_pres,pres(xx,yy,:),(w_back+w_for)/2.,temp_back,par_q,lev)
+
+  !need to calculate the new parcel potential temperature
+  call bilin_interp(pot_temp(:,:,lev),lon2d,lat2d,par_lon,par_lat,pt1)
+  if (lev == dim_k .OR. lev == 1 .OR. par_pres == pres(xx,yy,lev)) then
+    par_pot_temp = pt1
+  else
+    if (par_pres > pres(xx,yy,lev)) then
+      call bilin_interp(pot_temp(:,:,lev+1),lon2d,lat2d,par_lon,par_lat,pt2)
+      vfac = (log(pres(xx,yy,lev+1))-log(par_pres))/(log(pres(xx,yy,lev+1))-log(pres(xx,yy,lev)))
+      par_pot_temp = (1-vfac)*pt2 + vfac*pt1
+    else
+      call bilin_interp(pot_temp(:,:,lev-1),lon2d,lat2d,par_lon,par_lat,pt2)
+      vfac = (log(pres(xx,yy,lev))-log(par_pres))/(log(pres(xx,yy,lev))-log(pres(xx,yy,lev-1)))
+      par_pot_temp = (1-vfac)*pt1 + vfac*pt2
+    end if
+  end if
+end if
+
+
+if (lev==0) then
+  print *,'L2389, ',par_lev,lev,par_pres,par_pot_temp,temp_back,thread
+  STOP
+end if
+
+par_lev = lev
+
+
+
+END SUBROUTINE implicit_back_traj
+
+!***********************************************************************
 
 SUBROUTINE implicit_back_traj_w(u,v,w,temp,pres,lon2d,lat2d, &
 				par_lon,par_lat,par_lev, &
@@ -2872,9 +2143,9 @@ USE global_data
 IMPLICIT NONE
 
 REAL, INTENT(IN), DIMENSION(:,:,:,:) :: u,v,w
+!INTEGER, INTENT(IN), DIMENSION(:,:) :: pbl_lev
 REAL, INTENT(IN), DIMENSION(:,:,:) :: pres,temp
 REAL, INTENT(IN), DIMENSION(:,:) :: lon2d,lat2d
-!INTEGER, INTENT(IN), DIMENSION(:,:) :: pbl_lev
 REAL, INTENT(INOUT) :: par_lon,par_lat,par_pres
 REAL, INTENT(IN) :: par_q
 INTEGER, INTENT(INOUT) :: par_lev
@@ -2882,8 +2153,6 @@ INTEGER, INTENT(IN) :: thread
 
 INTEGER :: xx,yy,lev !ll
 REAL :: lon,lat,u_back,v_back,w_par,temp_par,u_for,v_for,pr
-!REAL :: pt1,pt2,vfac,pr1,pr2
-!INTEGER, DIMENSION(1) :: dummy_lev
 
 
 ! Get u and v at parcel location, by interpolating in time (current and previous parcel timestep), and space (parcel lat/lon and lat/lon of the nearest grid point).
@@ -2894,10 +2163,6 @@ call near_pt(lon2d,lat2d,lon,lat,xx,yy)
 
 call bilin_interp(u(:,:,par_lev,2),lon2d,lat2d,xx,yy,lon,lat,u_back) ! where lon2d/lat2d are the subgrids
 call bilin_interp(v(:,:,par_lev,2),lon2d,lat2d,xx,yy,lon,lat,v_back)
-! call bilin_interp(u(:,:,par_lev,2),lon2d,lat2d,lon,lat,u_back) ! where lon2d/lat2d are the subgrids
-! call bilin_interp(v(:,:,par_lev,2),lon2d,lat2d,lon,lat,v_back)
-
-! THESE U,V VALUES ARE STAGGERED BUT ASSUMED TO BE AT CELL CENTRE??
 
 
 !find lat and lon after advecting back in time. Reverse the wind directions (make negative) as you're going back in time.
@@ -2910,8 +2175,6 @@ call near_pt(lon2d,lat2d,lon,lat,xx,yy)
 pr = par_pres
 call bilin_interp(temp(:,:,par_lev),lon2d,lat2d,xx,yy,lon,lat,temp_par)
 call bilin_interp(w(:,:,par_lev,2),lon2d,lat2d,xx,yy,lon,lat,w_par)
-! call bilin_interp(temp(:,:,par_lev),lon2d,lat2d,lon,lat,temp_par)
-! call bilin_interp(w(:,:,par_lev,2),lon2d,lat2d,lon,lat,w_par)
 ! Reverse vertical wind direction as you're going back in time. 
 call new_parcel_level_w(pr,pres(xx,yy,:),-1.*w_par,temp_par,par_q,lev)
 
@@ -2919,8 +2182,6 @@ call new_parcel_level_w(pr,pres(xx,yy,:),-1.*w_par,temp_par,par_q,lev)
 !get u and v at new lon/lat found using first advect call above
 call bilin_interp(u(:,:,lev,1),lon2d,lat2d,xx,yy,lon,lat,u_for)
 call bilin_interp(v(:,:,lev,1),lon2d,lat2d,xx,yy,lon,lat,v_for)
-! call bilin_interp(u(:,:,lev,1),lon2d,lat2d,lon,lat,u_for)
-! call bilin_interp(v(:,:,lev,1),lon2d,lat2d,lon,lat,v_for)
 
 !
 !find new location of parcel as mean location given by back and forward trajectory
@@ -2932,8 +2193,6 @@ call near_pt(lon2d,lat2d,par_lon,par_lat,xx,yy)
 
 call bilin_interp(temp(:,:,par_lev),lon2d,lat2d,xx,yy,par_lon,par_lat,temp_par)
 call bilin_interp(w(:,:,par_lev,1),lon2d,lat2d,xx,yy,par_lon,par_lat,w_par)
-! call bilin_interp(temp(:,:,par_lev),lon2d,lat2d,par_lon,par_lat,temp_par)
-! call bilin_interp(w(:,:,par_lev,1),lon2d,lat2d,par_lon,par_lat,w_par)
 call new_parcel_level_w(par_pres,pres(xx,yy,:),-1.*w_par,temp_par,par_q,lev)
 
 
@@ -2947,6 +2206,7 @@ par_lev = lev
 
 END SUBROUTINE implicit_back_traj_w
 
+!***********************************************************************
   
 END MODULE bt_subs
 
@@ -2985,14 +2245,14 @@ REAL :: ptop,delx,par_lat,par_lon,par_pres,par_q,new_par_q,end_precip
 INTEGER :: datatstep
 REAL,ALLOCATABLE,DIMENSION(:,:) :: lat2d,lon2d,lon2d_corrected
 REAL,ALLOCATABLE,DIMENSION(:,:) :: terrain,WV_cont,WV_cont_day 
-REAL,ALLOCATABLE,DIMENSION(:,:) :: WV_cont_apbl!,WV_cont_day_apbl
+!REAL,ALLOCATABLE,DIMENSION(:,:) :: WV_cont_apbl!,WV_cont_day_apbl 
 REAL,ALLOCATABLE,DIMENSION(:,:,:) :: precip
 REAL,ALLOCATABLE,DIMENSION(:,:,:) :: evap,tpw,pbl_hgt,surf_pres,pstar,psfc
 REAL,ALLOCATABLE,DIMENSION(:,:,:,:) :: u,v,w,temp,act_temp,mix,pp,pb,pw,mixcld,mixtot,pres
 !REAL,ALLOCATABLE,DIMENSION(:,:,:,:) :: pot_temp !
 REAL,ALLOCATABLE,DIMENSION(:,:,:,:) :: unow,vnow,wnow
 REAL,ALLOCATABLE,DIMENSION(:,:,:) :: pres_then,tempnow
-!REAL,ALLOCATABLE,DIMENSION(:,:,:) :: pot_temp_then !
+!REAL,ALLOCATABLE,DIMENSION(:,:,:) :: pot_temp_then ! 
 INTEGER,ALLOCATABLE,DIMENSION(:,:,:) :: pbl_lev
 
 INTEGER,ALLOCATABLE,DIMENSION(:) :: par_release
@@ -3081,8 +2341,8 @@ status = nf90_inq_varid(headncid, "XLAT", latcrsid)  !latitudes of grid points (
 if(status /= nf90_NoErr) call handle_err(status)
 status = nf90_inq_varid(headncid, "XLONG", loncrsid)  !longitudes of grid points (degrees)
 if(status /= nf90_NoErr) call handle_err(status)
-status = nf90_inq_varid(headncid, "HGT", terid)  !model terrain (m)
-if(status /= nf90_NoErr) call handle_err(status)
+! status = nf90_inq_varid(headncid, "HGT", terid)  !model terrain (m)
+! if(status /= nf90_NoErr) call handle_err(status)
 status = nf90_inq_dimid(headncid, "Time", tstepid)  !number of time steps in file
 if(status /= nf90_NoErr) call handle_err(status)
 
@@ -3117,7 +2377,8 @@ dim_j = fdim_j - 2*(bdy-1)
 totpts = (dim_j-2)*(dim_i-2)
 
 ! Allocate the required arrays
-ALLOCATE( terrain(dim_j,dim_i),lon2d(dim_j,dim_i),lat2d(dim_j,dim_i), STAT = status) !sigma(dim_k),pstar(dim_j,dim_i,datadaysteps), &
+ALLOCATE( lon2d(dim_j,dim_i),lat2d(dim_j,dim_i), STAT = status) 
+!sigma(dim_k),pstar(dim_j,dim_i,datadaysteps), terrain(dim_j,dim_i)
  
 !
 ! Read in more variables
@@ -3126,8 +2387,8 @@ status = nf90_get_var(headncid, latcrsid, lat2d,start=(/bdy,bdy/),count=(/dim_j,
 if(status /= nf90_NoErr) call handle_err(status)
 status = nf90_get_var(headncid, loncrsid, lon2d,start=(/bdy,bdy/),count=(/dim_j,dim_i/))
 if(status /= nf90_NoErr) call handle_err(status)
-status = nf90_get_var(headncid, terid, terrain,start=(/bdy,bdy/),count=(/dim_j,dim_i/))
-if(status /= nf90_NoErr) call handle_err(status)
+! status = nf90_get_var(headncid, terid, terrain,start=(/bdy,bdy/),count=(/dim_j,dim_i/))
+! if(status /= nf90_NoErr) call handle_err(status)
 
 status = nf90_close(headncid)
 
@@ -3157,13 +2418,13 @@ ALLOCATE( precip(dim_j,dim_i,datadaysteps), &
   evap(dim_j,dim_i,datatotsteps),u(dim_j,dim_i,dim_k,datatotsteps), &
   v(dim_j,dim_i,dim_k,datatotsteps),temp(dim_j,dim_i,dim_k,datatotsteps), &
   act_temp(dim_j,dim_i,dim_k,datatotsteps), &
+! pot_temp(dim_j,dim_i,dim_k,datatotsteps), &
   mix(dim_j,dim_i,dim_k,datatotsteps),pp(dim_j,dim_i,dim_k,datatotsteps),pb(dim_j,dim_i,dim_k,datatotsteps), &
-  !pot_temp(dim_j,dim_i,dim_k,datatotsteps), &
   mixtot(dim_j,dim_i,dim_k,datatotsteps), &
   tpw(dim_j,dim_i,datatotsteps),pw(dim_j,dim_i,dim_k,daytsteps+1), &
   mixcld(dim_j,dim_i,dim_k,datatotsteps),pres(dim_j,dim_i,dim_k,datatotsteps), &
   psfc(dim_j,dim_i,datatotsteps),surf_pres(dim_j,dim_i,datatotsteps), w(dim_j,dim_i,dim_k,datatotsteps), &
-  pbl_hgt(dim_j,dim_i,datatotsteps),pbl_lev(dim_j,dim_i,datatotsteps), STAT = status )
+  pbl_hgt(dim_j,dim_i,datatotsteps),pbl_lev(dim_j,dim_i,datatotsteps), STAT = status )  
 
   
 !
@@ -3191,7 +2452,7 @@ totpts = (dim_j-2)*(dim_i-2)
 
 ! Set the number of threads to use in the parallel sections
 call OMP_SET_NUM_THREADS(numthreads)
-! print *,'max threads=',omp_get_max_threads()
+
 
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -3220,9 +2481,6 @@ do dd = 1, totdays
   ! pp="P"(4d)perturbation pressure. pb="PB"(4d)base state pressure. psfc="PSFC"(3d) surface pressure.
   pres = pp + pb
   surf_pres = psfc
-  
-!   print *, surf_pres(1,1,1),ptop, pres(1,1,25,1)
-!   print *,ptop+0.145*(surf_pres(1,1,1)-ptop)
   
   
   ! *Potential temperature and equivalent potential temperature can be calculated here.*
@@ -3264,18 +2522,14 @@ do dd = 1, totdays
   
   !allocate these arrays for each thread
   ALLOCATE( WV_cont(dim_j,dim_i),WV_cont_day(dim_j,dim_i), &
-  		!WV_cont_apbl(dim_j,dim_i),WV_cont_day_apbl(dim_j,dim_i), &
+		!WV_cont_apbl(dim_j,dim_i),WV_cont_day_apbl(dim_j,dim_i), &
 		unow(ssdim,ssdim,dim_k,2),vnow(ssdim,ssdim,dim_k,2), &
-  		!pot_temp_then(ssdim,ssdim,dim_k), &
 		par_release(daytsteps), &
+		!pot_temp_then(ssdim,ssdim,dim_k), &
 		pres_then(ssdim,ssdim,dim_k),wnow(ssdim,ssdim,dim_k,2), &
 		tempnow(ssdim,ssdim,dim_k), &
 		STAT = status)
 
-  
-!   if (eachParcel) then
-!     ALLOCATE(parcel_stats(10,totsteps), STAT = status)
-!   end if
 		
   !$OMP DO &
   !$OMP SCHEDULE (DYNAMIC)
@@ -3309,12 +2563,6 @@ do dd = 1, totdays
 	WV_cont_day = 0.
 	!WV_cont_day_apbl = 0.    
 
-	! Do you want to print out statements for debugging etc?
-! 	if (torec==0) then
-! 	  print_test = .TRUE.
-! 	else
-! 	  print_test = .FALSE.
-! 	end if
 
 	!
     ! Determine how many parcels to release today and use precip 
@@ -3378,11 +2626,7 @@ do dd = 1, totdays
 	    !$OMP CRITICAL (par_rel_height)
 	    call parcel_release_height(pw(xx,yy,:,tt),par_lev)
 	    !$OMP END CRITICAL (par_rel_height)
-
 	    	
-! 	    if (print_test) then
-! 	    !print *,"day,par_lev,xx,yy,tt ",dd,par_lev,xx,yy,tt,threadnum
-! 	    end if
 	    
 	    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!	    
 	    !release the parcel and track the back trajectory 
@@ -3409,10 +2653,6 @@ do dd = 1, totdays
 	    par_pres = lin_interp(pres(xx,yy,par_lev,ttdata:ttdata+1),ttfac)
 	    !$OMP END CRITICAL (par_pres1)
 	    
-	    
-! 	     if (print_test) then
-! 	     !print *,"par_q1",xx,yy,par_lev,par_q,ttdata,ttfac,par_pot_temp,par_pres,threadnum
-! 	     end if
 
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ! FOR EACH PARCEL RELEASE TIME, FOR EACH SIMULATION TIME STEP IN THE 
@@ -3422,20 +2662,7 @@ do dd = 1, totdays
 	      !
 	      !advect the parcel back in time one step
 	      !
-	      
-! 	      !current parcel stats
-! 	      if (eachParcel) then
-! 	        !print *,"nn ",nn,threadnum,par_lev
-! 	        parcel_stats(1,totsteps-daytsteps+tt+1-nn) = nn*1.
-! 			parcel_stats(2,totsteps-daytsteps+tt+1-nn) = par_lon
-! 			parcel_stats(3,totsteps-daytsteps+tt+1-nn) = par_lat
-! 			parcel_stats(4,totsteps-daytsteps+tt+1-nn) = par_pres
-! 			parcel_stats(5,totsteps-daytsteps+tt+1-nn) = par_q
-! 			parcel_stats(6,totsteps-daytsteps+tt+1-nn) = u(x,y,par_lev,ttdata)
-! 			parcel_stats(7,totsteps-daytsteps+tt+1-nn) = v(x,y,par_lev,ttdata)
-! 			parcel_stats(8,totsteps-daytsteps+tt+1-nn) = w(x,y,par_lev,ttdata)
-! 		end if
-	    
+
 	      !
 	      !calculate the lower left location for the subsection
 	      !
@@ -3478,10 +2705,7 @@ do dd = 1, totdays
 	      tempnow(:,:,:) = lin_interp3D(act_temp(ssx:ssx+ssdim-1,ssy:ssy+ssdim-1,:,nnMM5:nnMM5+1),nnfac)
 	      !$OMP END CRITICAl (tempnow1)
 	      
-	    
-		!if (nn<totsteps-daytsteps+tt) then
-		!  print *,nnMM5,nnfac,unow(x,y,par_lev,2),vnow(x,y,par_lev,2)
-		!end if
+
 
 		  ! Find where you are in the nn timeseries
 	      nnMM5 = INT((nn-1)/indatatsteps) + 1
@@ -3539,10 +2763,6 @@ do dd = 1, totdays
 			end if
 	      end if
 
-! 	     if (print_test) then
-! 	     !print *,"par_q",x,y,par_lev,nnMM5,nnfac,par_q,new_par_q,qfac,par_pot_temp,par_pres,threadnum
-! 	     end if
-
 
           !was moisture contributed to the parcel?
 	      !is the parcel in the pbl?
@@ -3564,18 +2784,6 @@ do dd = 1, totdays
 	      par_q = new_par_q
 	      	      
 
-! 	      if (print_test) then
-! 	      !print *,"what",x,y,par_lev,SUM(WV_cont),SUM(WV_cont_apbl),threadnum
-!               end if
-	     
-	     
-	      !saving parcel stats
-! 	      if (eachParcel) then
-! 	        parcel_stats(9,totsteps-daytsteps+tt+1-nn) = evap(x,y,ttdata)
-! 			parcel_stats(10,totsteps-daytsteps+tt+1-nn) = WV_cont(x,y)
-! 			end if
-	      
-	      
 	      !
 	      !if we have accounted for all the precip  then go to next parcel
 	      !
@@ -3622,44 +2830,6 @@ do dd = 1, totdays
 	        EXIT
 	      end if
 	     
-	      !
-	      !if we have left the domain then assign the remaining precip to
-	      !outside and go to next parcel
-	      !
-	      !if (x<2) then
-	        !print *,"hit boundary (orec,wv_cont)",torec,SUM(WV_cont)
-		!if (par_lev >= pbl_lev(x,y,nnMM5+1)) then
-	       !   WV_cont(1,y) = 1. - SUM(WV_cont+WV_cont_apbl)
-		!else
-		!  WV_cont_apbl(1,y) = 1. - SUM(WV_cont+WV_cont_apbl)
-		!end if
-	       ! EXIT
-	      !else if (x>dim_j-2) then
-	        !print *,"hit boundary (orec,wv_cont)",torec,SUM(WV_cont)
-		!if (par_lev >= pbl_lev(x,y,nnMM5+1)) then
-	      !    WV_cont(dim_j,y) = 1. - SUM(WV_cont+WV_cont_apbl)
-		!else
-		!  WV_cont_apbl(dim_j,y) = 1. - SUM(WV_cont+WV_cont_apbl)
-		!end if
-	      !  EXIT
-	     ! end if
-	     ! if (y<2) then
-	        !print *,"hit boundary (orec,wv_cont)",torec,SUM(WV_cont)
-		!if (par_lev >= pbl_lev(x,y,nnMM5+1)) then
-	      !    WV_cont(x,1) = 1. - SUM(WV_cont+WV_cont_apbl)
-		!else
-		!  WV_cont_apbl(x,1) = 1. - SUM(WV_cont+WV_cont_apbl)
-		!end if
-	      !  EXIT
-	     ! else if (y>dim_i-2) then
-	        !print *,"hit boundary (orec,wv_cont)",torec,SUM(WV_cont)
-		!if (par_lev >= pbl_lev(x,y,nnMM5+1)) then
-	      !    WV_cont(x,dim_i) = 1. - SUM(WV_cont+WV_cont_apbl)
-		!else
-		!  WV_cont_apbl(x,dim_i) = 1. - SUM(WV_cont+WV_cont_apbl)
-		!end if
-	       ! EXIT
-	     ! end if
 	    
 	      !
 	      !if we have reached here and nn=2 then we have neither left the
@@ -3677,20 +2847,11 @@ do dd = 1, totdays
 	    ! wv_cont(x,y) is a 2d grid of E/TPW values. The grid is added to for every nn parcel back-track. E.g. in one 10min daytstep, we might release 1 parcel. This parcel will calculate the contribution from every cell in the grid. However we could release more, like 5 parcels. The contribution from the grid should be the same no matter how many parcels we release. So we take the average grid contribution per parcel released. 
 	    WV_cont_day = WV_cont_day + WV_cont/npar
 	    !WV_cont_day_apbl = WV_cont_day_apbl + WV_cont_apbl/npar
-	    	  
-! 	    if (print_test) then
-! 	    !print *,'end2',sum(WV_cont_day),sum(WV_cont_day_apbl),SUM(WV_cont+WV_cont_apbl)
-! 	    end if
+
 	  
 	    if (par_lev==0) STOP
 	  
-	  
-! 	    !if keeping track of each parcel
-! 	    if (eachParcel) then
-! 	      !print *,"output",threadnum+10
-! 	      WRITE(threadnum+10) parcel_stats
-! 	      CLOSE(threadnum+10)
-! 	    end if
+
 	  
 	  
 	  end do  !mm loop
@@ -3706,13 +2867,12 @@ do dd = 1, totdays
 				count=(/dim_j,dim_i,1/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	!status = nf90_put_var(outncid,wvc2id,WV_cont_day_apbl,start=(/1,1,torec/), &
-	!			count=(/dim_j,dim_i,1/))
-	!if(status /= nf90_NoErr) call handle_err(status)
+    !           count=(/dim_j,dim_i,1/))
+	!if(status /= nf90_NoErr) call handle_err(status) 
 	status = nf90_put_var(outncid,xlocid,xx,start=(/torec/))
 	if(status /= nf90_NoErr) call handle_err(status)
 	status = nf90_put_var(outncid,ylocid,yy,start=(/torec/))
 	if(status /= nf90_NoErr) call handle_err(status)
-! 	status = nf90_put_var(outncid,dayid,daylist(dd)-1,start=(/torec/))
 	status = nf90_put_var(outncid,dayid,dd,start=(/torec/)) 
  	if(status /= nf90_NoErr) call handle_err(status)
 	status = nf90_put_var(outncid,opreid,SUM(precip(xx,yy,:)),start=(/torec/))
