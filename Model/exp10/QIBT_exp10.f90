@@ -1,9 +1,10 @@
+!%%%%%%% AUTHORSHIP %%%%%%%
+! This program was written by Jason P. Evans (UNSW) and modified by Chiara M. Holgate (ANU).
+! Please seek permission before publishing all or part of this code, from chiara.holgate@anu.edu.au.
+
+
 !%%%%%%% PURPOSE %%%%%%%
-! This program calculates the quasi-isentropic back trajectories of
-! water vapor using a method based on Dirmeyer & Brubaker, 1999,
-! "Contrasting evaporative moisture sources during the drought of
-! 1988 and the flood of 1993", Journal of Geophysical Research,
-! 104 D16 pg 19,383-19,397.
+! This program calculates the quasi-isentropic back trajectories of water vapor using a method based on Dirmeyer & Brubaker, 1999, "Contrasting evaporative moisture sources during the drought of 1988 and the flood of 1993", Journal of Geophysical Research, 104 D16 pg 19,383-19,397.
 !
 !%%%%%%% INPUT %%%%%%%
 ! Input data are taken from NARCliM output. 
