@@ -1,0 +1,72 @@
+#!/bin/bash
+
+# PURPOSE
+#===========
+# This script is a template for creating a PBS jobscript for each week to be simulated by the QIBT program, and submitting it to the queue.
+# The related python script "Create_QIBT_raijin_decks.py" creates a series of new decks by substituting the text in this template framed by % signs. 
+
+# USE
+#===========
+# Instructions for Gadi
+
+#
+# Load module for netcdf
+#
+module load intel-compiler/2019.3.199
+module load netcdf/4.7.1
+
+#
+# Clone the git repository
+#
+#git clone https://github.com/chiaraholgate/QIBT_shared.git
+#cd QIBT_shared
+
+#
+# Compile with OpenMP
+#
+# gfortran equivalent:
+# gfortran -ffree-line-length-512 -fopenmp -O3 -c QIBT_exp10.f90
+ifort -03 -fopenmp -c QIBT_exp11.f90
+
+#
+# Link the executable
+#
+# gfortran equivalent
+# gfortran -fopenmp -O3 -L/apps/netcdf/4.7.1/lib -lnetcdff QIBT_exp10.o -o main
+ifort -O3 -fopenmp -L/apps/netcdf/4.7.1/lib -lnetcdff QIBT_exp11.o -o main
+
+#
+# Run QIBT from 11 Jan 1980 to 13 Jan 1980, storing the results in subdirectory ./outputs
+#
+chmod u+x main
+#mkdir outputs
+
+#
+# PBS jobscript for Gadi
+#
+cat > /home/603/cxh603/PhD/PartB/Scripts/Model/exp10/pbs_scripts/QIBT_exp10_%syear%_%smon%_%sday%.pbs << EOF
+#!/bin/bash
+#PBS -P %proj%
+#PBS -q %queue%
+#PBS -l ncpus=%ncpus%
+#PBS -l mem=%lmem%GB
+#PBS -l walltime=%wallhours%:00:00
+#PBS -l storage=gdata/hh5 
+
+ulimit -s unlimited
+export OMP_NUM_THREADS=%nthreads%
+export DIROUT=%dirout%
+
+cd \$PBS_JOBFS
+
+/home/603/cxh603/PhD/PartB/Scripts/Model/exp11/QIBT_exp11 %sday% %smon% %syear% %edday% %edmon% %edyear% \$PBS_JOBFS/
+
+cp \$PBS_JOBFS/* \$DIROUT
+
+EOF
+
+#
+# Submit the job to Gadi normal queue
+#
+qsub /home/603/cxh603/PhD/PartB/Scripts/Model/exp11/pbs_scripts/QIBT_exp11_%syear%_%smon%_%sday%.pbs
+
