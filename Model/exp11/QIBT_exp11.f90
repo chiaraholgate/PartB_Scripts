@@ -623,28 +623,28 @@ if (status /= NF90_NOERR) call handle_err(status)
 !
 !get ids for each variable
 !
-status = nf90_inq_varid(prencid, "RAIN", preid) 	! [mm]
-if(status /= nf90_NoErr) call handle_err(status)
-status = nf90_inq_varid(lhncid, "LH", lhid)			! [Wm-2] > converted to mm at end of get_data subroutine
-if(status /= nf90_NoErr) call handle_err(status)
-status = nf90_inq_varid(ncid, "U", uid)			! [ms-1]
-if(status /= nf90_NoErr) call handle_err(status)
-status = nf90_inq_varid(ncid, "V", vid)			! [ms-1]
-if(status /= nf90_NoErr) call handle_err(status)
-status = nf90_inq_varid(ncid, "W", wid)			! [ms-1]
-if(status /= nf90_NoErr) call handle_err(status)
-status = nf90_inq_varid(ncid, "T", tid) 			! [K]
-if(status /= nf90_NoErr) call handle_err(status)
-status = nf90_inq_varid(ncid, "QVAPOR", qid)			! [kgkg-1]
-if(status /= nf90_NoErr) call handle_err(status)
-status = nf90_inq_varid(ncid, "P", ppid) 		! [Pa]
-if(status /= nf90_NoErr) call handle_err(status)
-status = nf90_inq_varid(ncid, "PB", pbid) 		! [Pa]
-if(status /= nf90_NoErr) call handle_err(status)
-status = nf90_inq_varid(ncid, "PBLH", pblid)		! [m]
-if(status /= nf90_NoErr) call handle_err(status)
-status = nf90_inq_varid(psfcncid, "PSFC", psfcid)		! [Pa]
-if(status /= nf90_NoErr) call handle_err(status)
+! status = nf90_inq_varid(prencid, "RAIN", preid) 	! [mm]
+! if(status /= nf90_NoErr) call handle_err(status)
+! status = nf90_inq_varid(lhncid, "LH", lhid)			! [Wm-2] > converted to mm at end of get_data subroutine
+! if(status /= nf90_NoErr) call handle_err(status)
+! status = nf90_inq_varid(ncid, "U", uid)			! [ms-1]
+! if(status /= nf90_NoErr) call handle_err(status)
+! status = nf90_inq_varid(ncid, "V", vid)			! [ms-1]
+! if(status /= nf90_NoErr) call handle_err(status)
+! status = nf90_inq_varid(ncid, "W", wid)			! [ms-1]
+! if(status /= nf90_NoErr) call handle_err(status)
+! status = nf90_inq_varid(ncid, "T", tid) 			! [K]
+! if(status /= nf90_NoErr) call handle_err(status)
+! status = nf90_inq_varid(ncid, "QVAPOR", qid)			! [kgkg-1]
+! if(status /= nf90_NoErr) call handle_err(status)
+! status = nf90_inq_varid(ncid, "P", ppid) 		! [Pa]
+! if(status /= nf90_NoErr) call handle_err(status)
+! status = nf90_inq_varid(ncid, "PB", pbid) 		! [Pa]
+! if(status /= nf90_NoErr) call handle_err(status)
+! status = nf90_inq_varid(ncid, "PBLH", pblid)		! [m]
+! if(status /= nf90_NoErr) call handle_err(status)
+! status = nf90_inq_varid(psfcncid, "PSFC", psfcid)		! [Pa]
+! if(status /= nf90_NoErr) call handle_err(status)
 
 
 END SUBROUTINE open_netcdf_files
