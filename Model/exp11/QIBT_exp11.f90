@@ -89,12 +89,13 @@ REAL, PARAMETER :: minpre = 2   !min daily precip to deal with (mm)
 
 INTEGER, PARAMETER :: bdy = 6   !boundary layers to ignore; trajectories will be tracked to this boundary
 
-CHARACTER(LEN=50), PARAMETER :: diri = "/g/data/hh5/tmp/w28/jpe561/back_traj/" 
+CHARACTER(LEN=50), PARAMETER :: diri = "/g/data/ma05/BARRA_R/v1/"
+!CHARACTER(LEN=50), PARAMETER :: diri = "/g/data/hh5/tmp/w28/jpe561/back_traj/" 
 ! CHARACTER(LEN=50), PARAMETER :: diri = "/srv/ccrc/data03/z3131380/PartB/Masks/"
 ! CHARACTER(LEN=100), PARAMETER :: diro = "/g/data/xc0/user/Holgate/QIBT/exp02/"
 CHARACTER(LEN=100) :: diro  
-CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfout/"
-CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfhrly/"  
+!CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfout/"
+!CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/g/data/hh5/tmp/w28/jpe561/back_traj/wrfhrly/"  
 ! CHARACTER(LEN=100), PARAMETER :: dirdata_atm = "/srv/ccrc/data33/z3481416/CCRC-WRF3.6.0.5-SEB/ERA-Interim/R2_nudging/out/"
 ! CHARACTER(LEN=100), PARAMETER :: dirdata_land = "/srv/ccrc/data03/z3131380/PartB/NARCliM_postprocess/" 
 
@@ -394,7 +395,8 @@ END SUBROUTINE day_month_year
 
 !***********************************************************************
 
-SUBROUTINE get_filename(d,mn,yr,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
+SUBROUTINE get_filename(d,mn,yr,filename_ext_air_temp)
+!filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
 !-----------------------------------------------
 ! given the month and year get the filename extension string
 !---------------------------------------------------
@@ -405,43 +407,31 @@ IMPLICIT NONE
 
 INTEGER, INTENT(IN) :: d
 INTEGER, INTENT(IN) :: mn, yr
-CHARACTER(LEN=100), INTENT(OUT) :: filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P
+CHARACTER(LEN=200), INTENT(OUT) :: filename_ext_air_temp
+!filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P
 
 if (mn<10) then
   if (d<10) then
-    filename_ext_atm = "wrfout_d01_"//TRIM(int_to_string(yr))//"-0"//TRIM(int_to_string(mn))//"-0"//TRIM(int_to_string(d))//"_00:00:00"
-    filename_ext_RAIN = "wrfhrly_d01_"//TRIM(int_to_string(yr))//"-0"//TRIM(int_to_string(mn))//"-0"//TRIM(int_to_string(d))//"_00:00:00_RAIN.nc"
-    filename_ext_LH = "wrfhrly_d01_"//TRIM(int_to_string(yr))//"-0"//TRIM(int_to_string(mn))//"-0"//TRIM(int_to_string(d))//"_00:00:00_LH.nc"
-    filename_ext_P = "wrfhrly_d01_"//TRIM(int_to_string(yr))//"-0"//TRIM(int_to_string(mn))//"-0"//TRIM(int_to_string(d))//"_00:00:00_PSFC.nc"
+    filename_ext_air_temp = "analysis/prs/air_temp/"//TRIM(int_to_string(yr))//"0"//TRIM(int_to_string(mn))//"air_temp-an-prs-PT0H-BARRA_R-v1-"//TRIM(int_to_string(yr))//"0"//TRIM(int_to_string(mn))//"0"//TRIM(int_to_string(d))//"T0000Z.sub.nc"
+    
+    
   else 
-    filename_ext_atm = "wrfout_d01_"//TRIM(int_to_string(yr))//"-0"//TRIM(int_to_string(mn))//"-"//TRIM(int_to_string(d))//"_00:00:00"
-    filename_ext_RAIN = "wrfhrly_d01_"//TRIM(int_to_string(yr))//"-0"//TRIM(int_to_string(mn))//"-"//TRIM(int_to_string(d))//"_00:00:00_RAIN.nc"
-    filename_ext_LH = "wrfhrly_d01_"//TRIM(int_to_string(yr))//"-0"//TRIM(int_to_string(mn))//"-"//TRIM(int_to_string(d))//"_00:00:00_LH.nc"
-    filename_ext_P = "wrfhrly_d01_"//TRIM(int_to_string(yr))//"-0"//TRIM(int_to_string(mn))//"-"//TRIM(int_to_string(d))//"_00:00:00_PSFC.nc"
+    filename_ext_air_temp = "analysis/prs/air_temp/"//TRIM(int_to_string(yr))//"0"//TRIM(int_to_string(mn))//"air_temp-an-prs-PT0H-BARRA_R-v1-"//TRIM(int_to_string(yr))//"0"//TRIM(int_to_string(mn))//TRIM(int_to_string(d))//"T0000Z.sub.nc"
+    
   end if
 else
   if (d<10) then
-    filename_ext_atm = "wrfout_d01_"//TRIM(int_to_string(yr))//"-"//TRIM(int_to_string(mn))//"-0"//TRIM(int_to_string(d))//"_00:00:00"
-    filename_ext_RAIN = "wrfhrly_d01_"//TRIM(int_to_string(yr))//"-"//TRIM(int_to_string(mn))//"-0"//TRIM(int_to_string(d))//"_00:00:00_RAIN.nc"
-    filename_ext_LH = "wrfhrly_d01_"//TRIM(int_to_string(yr))//"-"//TRIM(int_to_string(mn))//"-0"//TRIM(int_to_string(d))//"_00:00:00_LH.nc"
-    filename_ext_P = "wrfhrly_d01_"//TRIM(int_to_string(yr))//"-"//TRIM(int_to_string(mn))//"-0"//TRIM(int_to_string(d))//"_00:00:00_PSFC.nc"
+    filename_ext_air_temp = "analysis/prs/air_temp/"//TRIM(int_to_string(yr))//TRIM(int_to_string(mn))//"air_temp-an-prs-PT0H-BARRA_R-v1-"//TRIM(int_to_string(yr))//TRIM(int_to_string(mn))//"0"//TRIM(int_to_string(d))//"T0000Z.sub.nc"
   else
-    filename_ext_atm = "wrfout_d01_"//TRIM(int_to_string(yr))//"-"//TRIM(int_to_string(mn))//"-"//TRIM(int_to_string(d))//"_00:00:00"
-    filename_ext_RAIN = "wrfhrly_d01_"//TRIM(int_to_string(yr))//"-"//TRIM(int_to_string(mn))//"-"//TRIM(int_to_string(d))//"_00:00:00_RAIN.nc"
-    filename_ext_LH = "wrfhrly_d01_"//TRIM(int_to_string(yr))//"-"//TRIM(int_to_string(mn))//"-"//TRIM(int_to_string(d))//"_00:00:00_LH.nc"
-    filename_ext_P = "wrfhrly_d01_"//TRIM(int_to_string(yr))//"-"//TRIM(int_to_string(mn))//"-"//TRIM(int_to_string(d))//"_00:00:00_PSFC.nc"
+    filename_ext_air_temp = "analysis/prs/air_temp/"//TRIM(int_to_string(yr))//TRIM(int_to_string(mn))//"air_temp-an-prs-PT0H-BARRA_R-v1-"//TRIM(int_to_string(yr))//TRIM(int_to_string(mn))//TRIM(int_to_string(d))//"T0000Z.sub.nc"
   end if
 end if
 
-filename_ext_atm = ADJUSTL(filename_ext_atm)
-filename_ext_RAIN = ADJUSTL(filename_ext_RAIN)
-filename_ext_LH = ADJUSTL(filename_ext_LH)
-filename_ext_P = ADJUSTL(filename_ext_P)
+filename_ext_air_temp = ADJUSTL(filename_ext_air_temp)
+
 
 print *,'get_filename:'
-print *,'filename_ext_atm= ',filename_ext_atm 
-print *,'filename_ext_RAIN= ',filename_ext_RAIN
-print *,'filename_ext_LH= ',filename_ext_LH
+print *,'filename_ext_air_temp= ',filename_ext_air_temp 
 
 
 END SUBROUTINE get_filename
@@ -592,7 +582,8 @@ END SUBROUTINE new_out_file
 
 !***********************************************************************
 
-SUBROUTINE open_netcdf_files(ncid,prencid,lhncid,psfcncid,preid,lhid,uid,vid,wid,tid,qid,ppid,pbid,pblid,psfcid,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
+SUBROUTINE open_netcdf_files(ncid,prencid,lhncid,psfcncid,preid,lhid,uid,vid,wid,tid,qid,ppid,pbid,pblid,psfcid,filename_ext_air_temp)
+!filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
 !----------------------------------------------------------------
 ! open all the netcdf data files and get the variable ids
 !------------------------------------------------------------------
@@ -602,28 +593,32 @@ USE global_data
 
 IMPLICIT NONE
 
-INTEGER, INTENT(OUT) :: ncid,prencid,lhncid,psfcncid !,uncid,vncid,wncid,tncid,qncid,ppncid,pblncid
+INTEGER, INTENT(OUT) :: ncid!,prencid,lhncid,psfcncid !,uncid,vncid,wncid,tncid,qncid,ppncid,pblncid
 INTEGER, INTENT(OUT) :: preid,lhid,uid,vid,wid,tid,qid,ppid,pbid,pblid,psfcid 
-CHARACTER(LEN=100), INTENT(IN) :: filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P
+CHARACTER(LEN=200), INTENT(IN) :: filename_ext_air_temp
+!filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P
 
 INTEGER :: status
 
-
-! open the netcdf files - ATMOSPHERIC VARIABLES
-status = NF90_OPEN(TRIM(dirdata_atm)//TRIM(filename_ext_atm), NF90_NOWRITE, ncid)
+! open the netcdf files
+status = NF90_OPEN(TRIM(diri)//TRIM(filename_ext_air_temp), NF90_NOWRITE, ncid)
 if (status /= NF90_NOERR) call handle_err(status)
 
-! open the netcdf files - PRECIP 
-status = NF90_OPEN(TRIM(dirdata_land)//TRIM(filename_ext_RAIN), NF90_NOWRITE, prencid)
-if (status /= NF90_NOERR) call handle_err(status)
-
-! open the netcdf files - EVAP 
-status = NF90_OPEN(TRIM(dirdata_land)//TRIM(filename_ext_LH), NF90_NOWRITE, lhncid)
-if (status /= NF90_NOERR) call handle_err(status)
-
-! open the netcdf files - SURFACE PRESSURE
-status = NF90_OPEN(TRIM(dirdata_land)//TRIM(filename_ext_P), NF90_NOWRITE, psfcncid)
-if (status /= NF90_NOERR) call handle_err(status)
+! ! open the netcdf files - ATMOSPHERIC VARIABLES
+! status = NF90_OPEN(TRIM(dirdata_atm)//TRIM(filename_ext_atm), NF90_NOWRITE, ncid)
+! if (status /= NF90_NOERR) call handle_err(status)
+! 
+! ! open the netcdf files - PRECIP 
+! status = NF90_OPEN(TRIM(dirdata_land)//TRIM(filename_ext_RAIN), NF90_NOWRITE, prencid)
+! if (status /= NF90_NOERR) call handle_err(status)
+! 
+! ! open the netcdf files - EVAP 
+! status = NF90_OPEN(TRIM(dirdata_land)//TRIM(filename_ext_LH), NF90_NOWRITE, lhncid)
+! if (status /= NF90_NOERR) call handle_err(status)
+! 
+! ! open the netcdf files - SURFACE PRESSURE
+! status = NF90_OPEN(TRIM(dirdata_land)//TRIM(filename_ext_P), NF90_NOWRITE, psfcncid)
+! if (status /= NF90_NOERR) call handle_err(status)
 
 !
 !get ids for each variable
@@ -670,7 +665,7 @@ REAL, DIMENSION(:,:,:) :: precip,evap,pbl_hgt,psfc
 REAL, DIMENSION(:,:,:,:) :: u,v,w,t,q,qc,qt,pp,pb
 REAL, DIMENSION(SIZE(u,1),SIZE(u,2),SIZE(u,3),datadaysteps) :: temp
 
-CHARACTER(LEN=100) :: filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P
+CHARACTER(LEN=200) :: filename_ext_air_temp !filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P
 
 INTEGER :: ncid,prencid,lhncid,psfcncid 
 INTEGER :: preid,lhid,uid,vid,wid,tid,qid,ppid,pbid,pblid,psfcid
@@ -683,12 +678,17 @@ INTEGER :: jd_today,jd_before,new_y,new_m,new_d
 
 
 !first get the qt
-call get_data_mixtot(qc,qt)
+!!!!!!!!!!!!!call get_data_mixtot(qc,qt)
 
-call get_filename(day,mon,year,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
+!call get_filename(day,mon,year,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
+call get_filename(day,mon,year,filename_ext_air_temp)
+
+STOP
+
 
 !call open_netcdf_files(pncid,preid,lhid,uid,vid,wid,tid,qid,ppid,pbliqd,filename_ext)
-call open_netcdf_files(ncid,prencid,lhncid,psfcncid,preid,lhid,uid,vid,wid,tid,qid,ppid,pbid,pblid,psfcid,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
+call open_netcdf_files(ncid,prencid,lhncid,psfcncid,preid,lhid,uid,vid,wid,tid,qid,ppid,pbid,pblid,psfcid,filename_ext_air_temp)
+!filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
 
 !if this is a day around a storm peak we want the half day after as well
 if (peak) then
@@ -769,7 +769,7 @@ if (totbtadays>1) then
 	status = nf90_close(lhncid)
 	status = nf90_close(psfcncid)
 	
-	print *,'L948, Input file of first day loaded successfully:',filename_ext_atm
+	!print *,'L948, Input file of first day loaded successfully:',filename_ext_atm
 
 
 	! Get julian day of current day 
@@ -782,8 +782,10 @@ if (totbtadays>1) then
 		! Convert julidan day to gregorian
 		call gregorian(jd_before,new_y,new_m,new_d)
 		!print *,'L909, jd_before,new_y,new_m,new_d=',jd_before,new_y,new_m,new_d
-		call get_filename(new_d,new_m,new_y,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
-		call open_netcdf_files(ncid,prencid,lhncid,psfcncid,preid,lhid,uid,vid,wid,tid,qid,ppid,pbid,pblid,psfcid,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
+		call get_filename(new_d,new_m,new_y,filename_ext_air_temp)
+		!filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
+		call open_netcdf_files(ncid,prencid,lhncid,psfcncid,preid,lhid,uid,vid,wid,tid,qid,ppid,pbid,pblid,psfcid,filename_ext_air_temp)
+		!filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
 
 		status = nf90_get_var(lhncid, lhid, evap(:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)), &
 		start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
@@ -839,7 +841,7 @@ if (totbtadays>1) then
 		start=(/bdy,bdy,1/),count=(/dim_j,dim_i,datadaysteps/))
 		if(status /= nf90_NoErr) call handle_err(status)
 		
-		print *,'L1018, Input file of previous day loaded successfully:',i,filename_ext_atm
+		!print *,'L1018, Input file of previous day loaded successfully:',i,filename_ext_atm
 
 		! close the netcdf files
 		status = nf90_close(ncid)
@@ -852,8 +854,10 @@ if (totbtadays>1) then
 	! Get julian day for day after sim day (1st timestep needed) and open the corresponding input file
 	jd_before = jd_today+1
 	call gregorian(jd_before,new_y,new_m,new_d)
-	call get_filename(new_d,new_m,new_y,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
-	call open_netcdf_files(ncid,prencid,lhncid,psfcncid,preid,lhid,uid,vid,wid,tid,qid,ppid,pbid,pblid,psfcid,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
+	call get_filename(new_d,new_m,new_y,filename_ext_air_temp)
+	!filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
+	call open_netcdf_files(ncid,prencid,lhncid,psfcncid,preid,lhid,uid,vid,wid,tid,qid,ppid,pbid,pblid,psfcid,filename_ext_air_temp)
+	!filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
 	
 	status = nf90_get_var(lhncid, lhid, evap(:,:,datatotsteps), &
 	start=(/bdy,bdy,1/),count=(/dim_j,dim_i,1/))
@@ -915,7 +919,7 @@ if (totbtadays>1) then
 	status = nf90_close(lhncid)  
 	status = nf90_close(psfcncid)
 	
-	print *,'L1100, Input file of next day (1st time step) loaded successfully:',filename_ext_atm
+	!print *,'L1100, Input file of next day (1st time step) loaded successfully:',filename_ext_atm
 	
 else
 	print*, 'If you only want to back-track for one day, must change how input data is retrieved.'
@@ -935,198 +939,198 @@ END SUBROUTINE get_data
 
 !***********************************************************************
 
-SUBROUTINE open_mixtot_netcdf_files(ncid,clwid,rnwid,snowid,iceid,filename_ext_atm)
-!----------------------------------------------------------------
-! open all the netcdf data files and get the variable ids
-!------------------------------------------------------------------
-
-USE netcdf
-USE global_data
-
-IMPLICIT NONE
-
-INTEGER, INTENT(OUT) :: ncid !clwncid,rnwncid,snowncid,icencid
-INTEGER, INTENT(OUT) :: clwid,rnwid,snowid,iceid
-CHARACTER(LEN=100), INTENT(IN) :: filename_ext_atm
-
-INTEGER :: status
-
-! open the netcdf files - ATMOSPHERIC VARIABLES
-status = NF90_OPEN(TRIM(dirdata_atm)//TRIM(filename_ext_atm), NF90_NOWRITE, ncid)
-if (status /= NF90_NOERR) call handle_err(status)
-
-!get ids for each variable
-status = nf90_inq_varid(ncid, "QCLOUD", clwid)		! [kgkg-1]  ! QCLOUD
-if(status /= nf90_NoErr) call handle_err(status)
-status = nf90_inq_varid(ncid, "QRAIN", rnwid)		! [kgkg-1] ! QRAIN
-if(status /= nf90_NoErr) call handle_err(status)
-status = nf90_inq_varid(ncid, "QSNOW", snowid)		! [kgkg-1] ! QSNOW
-if(status /= nf90_NoErr) call handle_err(status)
-status = nf90_inq_varid(ncid, "QICE", iceid)		! [kgkg-1] ! QICE
-if(status /= nf90_NoErr) call handle_err(status)
-
-END SUBROUTINE open_mixtot_netcdf_files
+! SUBROUTINE open_mixtot_netcdf_files(ncid,clwid,rnwid,snowid,iceid,filename_ext_atm)
+! !----------------------------------------------------------------
+! ! open all the netcdf data files and get the variable ids
+! !------------------------------------------------------------------
+! 
+! USE netcdf
+! USE global_data
+! 
+! IMPLICIT NONE
+! 
+! INTEGER, INTENT(OUT) :: ncid !clwncid,rnwncid,snowncid,icencid
+! INTEGER, INTENT(OUT) :: clwid,rnwid,snowid,iceid
+! CHARACTER(LEN=100), INTENT(IN) :: filename_ext_atm
+! 
+! INTEGER :: status
+! 
+! ! open the netcdf files - ATMOSPHERIC VARIABLES
+! status = NF90_OPEN(TRIM(dirdata_atm)//TRIM(filename_ext_atm), NF90_NOWRITE, ncid)
+! if (status /= NF90_NOERR) call handle_err(status)
+! 
+! !get ids for each variable
+! status = nf90_inq_varid(ncid, "QCLOUD", clwid)		! [kgkg-1]  ! QCLOUD
+! if(status /= nf90_NoErr) call handle_err(status)
+! status = nf90_inq_varid(ncid, "QRAIN", rnwid)		! [kgkg-1] ! QRAIN
+! if(status /= nf90_NoErr) call handle_err(status)
+! status = nf90_inq_varid(ncid, "QSNOW", snowid)		! [kgkg-1] ! QSNOW
+! if(status /= nf90_NoErr) call handle_err(status)
+! status = nf90_inq_varid(ncid, "QICE", iceid)		! [kgkg-1] ! QICE
+! if(status /= nf90_NoErr) call handle_err(status)
+! 
+! END SUBROUTINE open_mixtot_netcdf_files
 
 !***********************************************************************
 
-SUBROUTINE get_data_mixtot(qc,qt)
-!-----------------------------------------------
-! read in the data for the first time
-!-----------------------------------------------
-
-USE global_data
-USE netcdf
-
-IMPLICIT NONE
-
-REAL, DIMENSION(:,:,:,:) :: qc,qt
-
-CHARACTER(LEN=100) :: filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P
-
-REAL, DIMENSION(SIZE(qt,1),SIZE(qt,2),SIZE(qt,3),SIZE(qt,4)) :: clw,rnw,snow,ice
-REAL, DIMENSION(SIZE(qt,1),SIZE(qt,2),SIZE(qt,3),datadaysteps) :: temp
-
-INTEGER :: ncid 
-INTEGER :: clwid,rnwid,snowid,iceid
-INTEGER :: sind,status,sind2,i,getsteps,getsteps2
-
-REAL :: dayend
-
-INTEGER :: jd_today,jd_before,new_y,new_m,new_d
-
-call get_filename(day,mon,year,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
-
-call open_mixtot_netcdf_files(ncid,clwid,rnwid,snowid,iceid,filename_ext_atm)
-
-!if this is a day around a storm peak we want the half day after as well
-if (peak) then
-  dayend = day + 0.5
-else
-  dayend = day
-end if
-  
-  
-!!! SIM DAY SHOULD BE AT THE END OF THE ARRAY, DAY BEFORE JUST BEFORE THAT, ETC.
-!!! LAST BACK-TRACKED DAY SHOULD BE AT THE START OF THE ARRAY.
-!!! THE LAST TIME POSITION IN THE ARRAY SHOULD BE THE FIRST TIMESTEP OF SIM DAY + 1.
-
-! Since our input files only consist of one day, open all timesteps (datadaysteps) in file (i.e. remove sind2, make it 1)
-
-! We want the event day + totbtadays before it
-
-if (totbtadays>1) then
-	! Open the first day input file
-	status = nf90_get_var(ncid, clwid, temp(:,:,:,:), &
-	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))    
-	if(status /= nf90_NoErr) call handle_err(status)
-	
-	clw(:,:,:,(datatotsteps-datadaysteps):(datatotsteps-1)) = temp(:,:,dim_k:1:-1,:)
-
-	status = nf90_get_var(ncid, rnwid, temp(:,:,:,:), &
-	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-	if(status /= nf90_NoErr) call handle_err(status)
-	
-	rnw(:,:,:,(datatotsteps-datadaysteps):(datatotsteps-1)) = temp(:,:,dim_k:1:-1,:)
-
-	status = nf90_get_var(ncid, snowid, temp(:,:,:,:), &
-	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-	if(status /= nf90_NoErr) call handle_err(status)
-	
-	snow(:,:,:,(datatotsteps-datadaysteps):(datatotsteps-1)) = temp(:,:,dim_k:1:-1,:)
-
-	status = nf90_get_var(ncid, iceid, temp(:,:,:,:), &
-	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-	if(status /= nf90_NoErr) call handle_err(status)
-	
-	ice(:,:,:,(datatotsteps-datadaysteps):(datatotsteps-1)) = temp(:,:,dim_k:1:-1,:)
-	
-	! close the netcdf file
-	status = nf90_close(ncid)
-
-	! Get julian day of current day 
-	jd_today = julian(year,mon,day)
-	
-	! Get julian/gregrorian day for all other totbtadays and open the corresponding input files
-	do i = 1,totbtadays
-		jd_before = jd_today-i 
-		! Convert julian day to gregorian
-		call gregorian(jd_before,new_y,new_m,new_d)
-		call get_filename(new_d,new_m,new_y,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
-		call open_mixtot_netcdf_files(ncid,clwid,rnwid,snowid,iceid,filename_ext_atm)
-
-		status = nf90_get_var(ncid, clwid, temp(:,:,:,:), &
-		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))    
-		if(status /= nf90_NoErr) call handle_err(status)
-		
-		clw(:,:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
-
-		status = nf90_get_var(ncid, rnwid, temp(:,:,:,:), &
-		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-		if(status /= nf90_NoErr) call handle_err(status)
-		
-		rnw(:,:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
-
-		status = nf90_get_var(ncid, snowid, temp(:,:,:,:), &
-		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-		if(status /= nf90_NoErr) call handle_err(status)
-		
-		snow(:,:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
-
-		status = nf90_get_var(ncid, iceid, temp(:,:,:,:), &
-		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
-		if(status /= nf90_NoErr) call handle_err(status)
-		
-		ice(:,:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
-		
-		! close the netcdf file
-		status = nf90_close(ncid)
-	end do
-	
-	! Get julian day for day after sim day (1st timestep needed) and open the corresponding input file
-	jd_before = jd_today+1
-	call gregorian(jd_before,new_y,new_m,new_d)
-	call get_filename(new_d,new_m,new_y,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
-	call open_mixtot_netcdf_files(ncid,clwid,rnwid,snowid,iceid,filename_ext_atm)
-
-	status = nf90_get_var(ncid, clwid, temp(:,:,:,1), &
-	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))    
-	if(status /= nf90_NoErr) call handle_err(status)
-	
-	clw(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
-
-	status = nf90_get_var(ncid, rnwid, temp(:,:,:,1), &
-	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
-	if(status /= nf90_NoErr) call handle_err(status)
-	
-	rnw(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
-
-	status = nf90_get_var(ncid, snowid, temp(:,:,:,1), &
-	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
-	if(status /= nf90_NoErr) call handle_err(status)
-	
-	snow(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
-
-	status = nf90_get_var(ncid, iceid, temp(:,:,:,1), &
-	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
-	if(status /= nf90_NoErr) call handle_err(status)
-	
-	ice(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
-	
-	! close the netcdf file
-	status = nf90_close(ncid)
-	
-	print *,'L1100, Input file of next day (1st time step) loaded successfully:',filename_ext_atm
-	
-else
-	print*, 'If you only want to back-track for one day, must change how input data is retrieved.'
-
-	
-end if
-
-qc = clw + rnw + snow + ice
-qt = qc  
-
-END SUBROUTINE get_data_mixtot
+! SUBROUTINE get_data_mixtot(qc,qt)
+! !-----------------------------------------------
+! ! read in the data for the first time
+! !-----------------------------------------------
+! 
+! USE global_data
+! USE netcdf
+! 
+! IMPLICIT NONE
+! 
+! REAL, DIMENSION(:,:,:,:) :: qc,qt
+! 
+! CHARACTER(LEN=100) :: filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P
+! 
+! REAL, DIMENSION(SIZE(qt,1),SIZE(qt,2),SIZE(qt,3),SIZE(qt,4)) :: clw,rnw,snow,ice
+! REAL, DIMENSION(SIZE(qt,1),SIZE(qt,2),SIZE(qt,3),datadaysteps) :: temp
+! 
+! INTEGER :: ncid 
+! INTEGER :: clwid,rnwid,snowid,iceid
+! INTEGER :: sind,status,sind2,i,getsteps,getsteps2
+! 
+! REAL :: dayend
+! 
+! INTEGER :: jd_today,jd_before,new_y,new_m,new_d
+! 
+! call get_filename(day,mon,year,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
+! 
+! call open_mixtot_netcdf_files(ncid,clwid,rnwid,snowid,iceid,filename_ext_atm)
+! 
+! !if this is a day around a storm peak we want the half day after as well
+! if (peak) then
+!   dayend = day + 0.5
+! else
+!   dayend = day
+! end if
+!   
+!   
+! !!! SIM DAY SHOULD BE AT THE END OF THE ARRAY, DAY BEFORE JUST BEFORE THAT, ETC.
+! !!! LAST BACK-TRACKED DAY SHOULD BE AT THE START OF THE ARRAY.
+! !!! THE LAST TIME POSITION IN THE ARRAY SHOULD BE THE FIRST TIMESTEP OF SIM DAY + 1.
+! 
+! ! Since our input files only consist of one day, open all timesteps (datadaysteps) in file (i.e. remove sind2, make it 1)
+! 
+! ! We want the event day + totbtadays before it
+! 
+! if (totbtadays>1) then
+! 	! Open the first day input file
+! 	status = nf90_get_var(ncid, clwid, temp(:,:,:,:), &
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))    
+! 	if(status /= nf90_NoErr) call handle_err(status)
+! 	
+! 	clw(:,:,:,(datatotsteps-datadaysteps):(datatotsteps-1)) = temp(:,:,dim_k:1:-1,:)
+! 
+! 	status = nf90_get_var(ncid, rnwid, temp(:,:,:,:), &
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
+! 	if(status /= nf90_NoErr) call handle_err(status)
+! 	
+! 	rnw(:,:,:,(datatotsteps-datadaysteps):(datatotsteps-1)) = temp(:,:,dim_k:1:-1,:)
+! 
+! 	status = nf90_get_var(ncid, snowid, temp(:,:,:,:), &
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
+! 	if(status /= nf90_NoErr) call handle_err(status)
+! 	
+! 	snow(:,:,:,(datatotsteps-datadaysteps):(datatotsteps-1)) = temp(:,:,dim_k:1:-1,:)
+! 
+! 	status = nf90_get_var(ncid, iceid, temp(:,:,:,:), &
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
+! 	if(status /= nf90_NoErr) call handle_err(status)
+! 	
+! 	ice(:,:,:,(datatotsteps-datadaysteps):(datatotsteps-1)) = temp(:,:,dim_k:1:-1,:)
+! 	
+! 	! close the netcdf file
+! 	status = nf90_close(ncid)
+! 
+! 	! Get julian day of current day 
+! 	jd_today = julian(year,mon,day)
+! 	
+! 	! Get julian/gregrorian day for all other totbtadays and open the corresponding input files
+! 	do i = 1,totbtadays
+! 		jd_before = jd_today-i 
+! 		! Convert julian day to gregorian
+! 		call gregorian(jd_before,new_y,new_m,new_d)
+! 		call get_filename(new_d,new_m,new_y,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
+! 		call open_mixtot_netcdf_files(ncid,clwid,rnwid,snowid,iceid,filename_ext_atm)
+! 
+! 		status = nf90_get_var(ncid, clwid, temp(:,:,:,:), &
+! 		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))    
+! 		if(status /= nf90_NoErr) call handle_err(status)
+! 		
+! 		clw(:,:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
+! 
+! 		status = nf90_get_var(ncid, rnwid, temp(:,:,:,:), &
+! 		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
+! 		if(status /= nf90_NoErr) call handle_err(status)
+! 		
+! 		rnw(:,:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
+! 
+! 		status = nf90_get_var(ncid, snowid, temp(:,:,:,:), &
+! 		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
+! 		if(status /= nf90_NoErr) call handle_err(status)
+! 		
+! 		snow(:,:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
+! 
+! 		status = nf90_get_var(ncid, iceid, temp(:,:,:,:), &
+! 		start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,datadaysteps/))
+! 		if(status /= nf90_NoErr) call handle_err(status)
+! 		
+! 		ice(:,:,:,datatotsteps-(datadaysteps*(i+1)):(datatotsteps-(datadaysteps*i)-1)) = temp(:,:,dim_k:1:-1,:)
+! 		
+! 		! close the netcdf file
+! 		status = nf90_close(ncid)
+! 	end do
+! 	
+! 	! Get julian day for day after sim day (1st timestep needed) and open the corresponding input file
+! 	jd_before = jd_today+1
+! 	call gregorian(jd_before,new_y,new_m,new_d)
+! 	call get_filename(new_d,new_m,new_y,filename_ext_atm,filename_ext_RAIN,filename_ext_LH,filename_ext_P)
+! 	call open_mixtot_netcdf_files(ncid,clwid,rnwid,snowid,iceid,filename_ext_atm)
+! 
+! 	status = nf90_get_var(ncid, clwid, temp(:,:,:,1), &
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))    
+! 	if(status /= nf90_NoErr) call handle_err(status)
+! 	
+! 	clw(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
+! 
+! 	status = nf90_get_var(ncid, rnwid, temp(:,:,:,1), &
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
+! 	if(status /= nf90_NoErr) call handle_err(status)
+! 	
+! 	rnw(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
+! 
+! 	status = nf90_get_var(ncid, snowid, temp(:,:,:,1), &
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
+! 	if(status /= nf90_NoErr) call handle_err(status)
+! 	
+! 	snow(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
+! 
+! 	status = nf90_get_var(ncid, iceid, temp(:,:,:,1), &
+! 	start=(/bdy,bdy,1,1/),count=(/dim_j,dim_i,dim_k,1/))
+! 	if(status /= nf90_NoErr) call handle_err(status)
+! 	
+! 	ice(:,:,:,datatotsteps) = temp(:,:,dim_k:1:-1,1)
+! 	
+! 	! close the netcdf file
+! 	status = nf90_close(ncid)
+! 	
+! 	print *,'L1100, Input file of next day (1st time step) loaded successfully:',filename_ext_atm
+! 	
+! else
+! 	print*, 'If you only want to back-track for one day, must change how input data is retrieved.'
+! 
+! 	
+! end if
+! 
+! qc = clw + rnw + snow + ice
+! qt = qc  
+! 
+! END SUBROUTINE get_data_mixtot
 
 !***********************************************************************
 
@@ -2328,16 +2332,20 @@ else
 fname_sday=TRIM(int_to_string(sday))
 end if
 
-fname="wrfout_d01_"//TRIM(int_to_string(syear))//"-"//TRIM(fname_smon)//"-"//TRIM(fname_sday)//"_00:00:00"
+fname="analysis/prs/air_temp/"//TRIM(int_to_string(syear))//TRIM(fname_smon)//"air_temp-an-prs-PT0H-BARRA_R-v1-"//TRIM(int_to_string(syear))//TRIM(fname_smon)//TRIM(fname_sday)//"T0000Z.sub.nc"
 print *,'Get header info from first input file: ',fname
-status = NF90_OPEN(TRIM(dirdata_atm)//fname, NF90_NOWRITE, headncid)
+status = NF90_OPEN(TRIM(diri)//fname, NF90_NOWRITE, headncid)
 if (status /= NF90_NOERR) call handle_err(status)
+
+
+STOP
+
 
 !----------------------------------------------------------------
 ! Get ids for required variables from header
 
-status = nf90_inq_varid(headncid, "P_TOP", ptopid)  !top pressure in model (Pa)
-if(status /= nf90_NoErr) call handle_err(status)
+! status = nf90_inq_varid(headncid, "P_TOP", ptopid)  !top pressure in model (Pa)
+! if(status /= nf90_NoErr) call handle_err(status)
 status = nf90_inquire_attribute(headncid, nf90_global, "DX", delxid)  !grid distance (m)
 if(status /= nf90_NoErr) call handle_err(status)
 status = nf90_inq_varid(headncid, "XLAT", latcrsid)  !latitudes of grid points (degrees)
@@ -2352,8 +2360,9 @@ if(status /= nf90_NoErr) call handle_err(status)
 !----------------------------------------------------------------
 ! Read in 1d variables
 
-status = nf90_get_var(headncid, ptopid, ptop)
-if(status /= nf90_NoErr) call handle_err(status)
+! status = nf90_get_var(headncid, ptopid, ptop)
+! if(status /= nf90_NoErr) call handle_err(status)
+ptop = 0.1
 status = nf90_get_att(headncid, NF90_GLOBAL, "DX",delx)
 if(status /= nf90_NoErr) call handle_err(status)
 status = nf90_inquire_dimension(headncid, tstepid,len = datatstep) 
